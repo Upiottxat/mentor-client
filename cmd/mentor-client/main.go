@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -154,6 +155,11 @@ func runInit(args []string) error {
 		absLocal, err := filepath.Abs(*localPath)
 		if err != nil {
 			return err
+		}
+
+		info, err := os.Stat(absLocal)
+		if err != nil || !info.IsDir() {
+			return fmt.Errorf("local curriculum directory does not exist: %s", absLocal)
 		}
 
 		// 1. Try starter directory
@@ -445,10 +451,143 @@ func runSubmit(args []string) error {
 	fmt.Printf("%s[mentor-client]%s Packaging %d source files for %sLevel %d%s...\n", colorCyan, colorReset, len(files), colorBold, cfg.CurrentLevel, colorReset)
 
 	if cfg.ServerURL == "" {
-		// Local mock verification mode
-		fmt.Printf("%s[local-eval]%s Checking files syntax in local mode...\n", colorYellow, colorReset)
-		fmt.Printf("%s✔ [1/2] Predefined Verification: PASSED (%d files checked)%s\n", colorGreen, len(files), colorReset)
-		fmt.Printf("%s✔ [2/2] Dynamic Dual Oracle: PASSED (local simulation)%s\n", colorGreen, colorReset)
+		// Real local verification mode
+		fmt.Printf("%s[local-eval]%s Executing test verification in local mode...\n", colorYellow, colorReset)
+
+		type SpecCase struct {
+			Name     string `json:"name"`
+			Kind     string `json:"kind"`
+			RunOn    string `json:"run_on"`
+			Stdin    string `json:"stdin"`
+			Expected string `json:"expected"`
+			Matcher  string `json:"matcher"`
+		}
+
+		var cases []SpecCase
+
+		// 1. Locate spec for current level
+		specFile := filepath.Join(cfg.LocalPath, "server", "specs", fmt.Sprintf("level-%02d.spec.json", cfg.CurrentLevel))
+		if _, err := os.Stat(specFile); os.IsNotExist(err) {
+			specFile = filepath.Join(cfg.LocalPath, "server", "specs", fmt.Sprintf("level-%d.spec.json", cfg.CurrentLevel))
+		}
+
+		if data, err := os.ReadFile(specFile); err == nil {
+			var specData struct {
+				AgnosticTestSpec struct {
+					Cases []SpecCase `json:"cases"`
+				} `json:"agnostic_test_spec"`
+			}
+			if err := json.Unmarshal(data, &specData); err == nil {
+				cases = specData.AgnosticTestSpec.Cases
+			}
+		}
+
+		if len(cases) == 0 {
+			// Fallback: look in curriculum.json
+			curPath := filepath.Join(cfg.LocalPath, "curriculum.json")
+			if data, err := os.ReadFile(curPath); err == nil {
+				var cur struct {
+					Levels []struct {
+						Order            int `json:"order"`
+						AgnosticTestSpec struct {
+							Cases []SpecCase `json:"cases"`
+						} `json:"agnostic_test_spec"`
+					} `json:"levels"`
+				}
+				if err := json.Unmarshal(data, &cur); err == nil {
+					for _, l := range cur.Levels {
+						if l.Order == cfg.CurrentLevel {
+							cases = l.AgnosticTestSpec.Cases
+							break
+						}
+					}
+				}
+			}
+		}
+
+		if len(cases) == 0 {
+			return fmt.Errorf("no test cases found for level %d in local curriculum at %s", cfg.CurrentLevel, cfg.LocalPath)
+		}
+
+		predefinedPassed, predefinedTotal := 0, 0
+		dynamicPassed, dynamicTotal := 0, 0
+		allPassed := true
+		var failureMsg string
+
+		for _, tc := range cases {
+			isDynamic := (tc.Kind == "dynamic_oracle" || tc.RunOn == "submit_only")
+			if isDynamic {
+				dynamicTotal++
+			} else {
+				predefinedTotal++
+			}
+
+			// Run code locally in student workspace dir
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			var cmd *exec.Cmd
+			switch strings.ToLower(cfg.Language) {
+			case "python", "py", "python3":
+				cmd = exec.CommandContext(ctx, "python3", "main.py")
+			case "rust":
+				cmd = exec.CommandContext(ctx, "cargo", "run", "--quiet")
+			default: // go
+				cmd = exec.CommandContext(ctx, "go", "run", ".")
+			}
+			cmd.Dir = dir
+			if tc.Stdin != "" {
+				cmd.Stdin = strings.NewReader(tc.Stdin)
+			}
+
+			outBytes, err := cmd.CombinedOutput()
+			cancel()
+
+			out := string(outBytes)
+
+			if err != nil {
+				allPassed = false
+				failureMsg = fmt.Sprintf("Execution error on case %q: %v\nOutput:\n%s", tc.Name, err, out)
+				break
+			}
+
+			matched := false
+			switch tc.Matcher {
+			case "trim":
+				matched = (strings.TrimSpace(out) == strings.TrimSpace(tc.Expected))
+			case "contains":
+				matched = strings.Contains(out, tc.Expected)
+			default: // exact
+				matched = (out == tc.Expected)
+			}
+
+			if !matched {
+				allPassed = false
+				failureMsg = fmt.Sprintf("Assertion failed on case %q (matcher: %s):\n  Expected: %q\n  Actual:   %q", tc.Name, tc.Matcher, tc.Expected, out)
+				break
+			}
+
+			if isDynamic {
+				dynamicPassed++
+			} else {
+				predefinedPassed++
+			}
+		}
+
+		if !allPassed {
+			fmt.Printf("\n%s❌ SUBMISSION FAILED%s\n\n%s\n", colorRed, colorReset, failureMsg)
+			if predefinedTotal > 0 {
+				fmt.Printf("\nPredefined tests: %d/%d passed\n", predefinedPassed, predefinedTotal)
+			}
+			if dynamicTotal > 0 {
+				fmt.Printf("Dynamic Oracle:   %d/%d passed\n", dynamicPassed, dynamicTotal)
+			}
+			fmt.Printf("\nNeed a nudge? Run %smentor-client hint%s to reveal a hint.\n", colorBold, colorReset)
+			return nil
+		}
+
+		fmt.Printf("%s✔ [1/2] Predefined Verification: PASSED (%d/%d cases)%s\n", colorGreen, predefinedPassed, predefinedTotal, colorReset)
+		if dynamicTotal > 0 {
+			fmt.Printf("%s✔ [2/2] Dynamic Dual Oracle:     PASSED (%d/%d vectors)%s\n", colorGreen, dynamicPassed, dynamicTotal, colorReset)
+		}
 		fmt.Printf("\n%s🎉 LEVEL %d CERTIFIED VERIFIED!%s\n", colorGreen, cfg.CurrentLevel, colorReset)
 
 		cfg.CurrentLevel++
