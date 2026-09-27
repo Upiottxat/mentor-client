@@ -60,18 +60,18 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Printf(`%smentor-client%s — Minimal Student CLI for Mentor Platform 💻
+	fmt.Printf(`%smentor-client%s — Developer Workspace & Sandboxed Verification Client
 
 %sUSAGE:%s
   mentor-client <command> [flags]
 
 %sCOMMANDS:%s
-  init <course>   Initialize a new course workspace from starter code
-  status          Show current level, milestone progress, and active goal
-  brief           Display the instructions, concepts, and constraints for current level
-  hint            Request progressive hint tier without spoiling the solution
-  submit          Submit your local code to the server (triggers Dynamic Dual Oracle)
-  help            Show this help message
+  init <course>   Initialize an isolated course workspace with verified starter code
+  status          Inspect active level, progression metrics, and milestone goals
+  brief           Render architectural brief, public constraints, and verification contract
+  hint            Request escalating progressive hint tier without solution leakage
+  submit          Submit code to authoritative sandbox runner (triggers Dynamic Dual Oracle)
+  help            Display client commands and configuration options
 
 %sEXAMPLES:%s
   mentor-client init simple-shell --server http://localhost:8080
