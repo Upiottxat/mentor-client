@@ -67,7 +67,7 @@ func printUsage() {
   mentor-client <command> [flags]
 
 %sCOMMANDS:%s
-  init <course>   Initialize an isolated course workspace with verified starter code
+  init            Initialize an isolated course workspace with verified starter code
   status          Inspect active level, progression metrics, and milestone goals
   brief           Render architectural brief, public constraints, and verification contract
   hint            Request escalating progressive hint tier without solution leakage
@@ -75,11 +75,35 @@ func printUsage() {
   help            Display client commands and configuration options
 
 %sEXAMPLES:%s
-  mentor-client init simple-shell --server http://localhost:8080
-  mentor-client init simple-shell --local ./out/mini-project-course
-  mentor-client brief
-  mentor-client submit
+  # Initialize workspace by specifying course directory:
+  mentor-client init --course /path/to/mini-project-course [--dir ./my-shell]
+
+  # Read active level brief:
+  mentor-client brief --course /path/to/mini-project-course [--level 1]
+  # (or run 'mentor-client brief' inside your workspace)
+
+  # Submit and test your solution:
+  mentor-client submit --course /path/to/mini-project-course
+  # (or run 'mentor-client submit' inside your workspace)
 `, colorBold, colorReset, colorBold, colorReset, colorBold, colorReset, colorBold, colorReset)
+}
+
+// rearrangeArgs moves flags to the front so standard Go flag.FlagSet can parse them regardless of order
+func rearrangeArgs(args []string) []string {
+	var flags, nonFlags []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			flags = append(flags, arg)
+			if !strings.Contains(arg, "=") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+				flags = append(flags, args[i])
+			}
+		} else {
+			nonFlags = append(nonFlags, arg)
+		}
+	}
+	return append(flags, nonFlags...)
 }
 
 // findWorkspaceDir finds the directory containing .mentor/config.json, walking upwards if needed.
@@ -105,65 +129,49 @@ func findWorkspaceDir() (string, *config.WorkspaceConfig, error) {
 	return "", nil, fmt.Errorf("not in a mentor workspace (run 'mentor-client init' first)")
 }
 
-// rearrangeArgs moves flags to the front so standard Go flag.FlagSet can parse them regardless of order
-func rearrangeArgs(args []string) []string {
-	var flags, nonFlags []string
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if strings.HasPrefix(arg, "-") {
-			flags = append(flags, arg)
-			if !strings.Contains(arg, "=") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
-				i++
-				flags = append(flags, args[i])
-			}
-		} else {
-			nonFlags = append(nonFlags, arg)
-		}
-	}
-	return append(flags, nonFlags...)
-}
-
 func runInit(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
-	serverURL := fs.String("server", "", "mentor-server URL (default: http://localhost:8080 when not local)")
-	localPath := fs.String("local", "", "Local curriculum path for offline/dev testing")
+	courseFlag := fs.String("course", "", "Path to local course directory (or course slug in server mode)")
+	localFlag := fs.String("local", "", "Alias for --course")
+	serverURL := fs.String("server", "", "mentor-server URL (default: http://localhost:8080 when using server)")
 	destDir := fs.String("dir", "", "Target directory for course workspace (default: course slug)")
 
 	if err := fs.Parse(rearrangeArgs(args)); err != nil {
 		return err
 	}
 
-	courseSlug := fs.Arg(0)
-	if courseSlug == "" {
-		return fmt.Errorf("course slug is required: mentor-client init <course-slug>")
+	courseInput := *courseFlag
+	if courseInput == "" {
+		courseInput = *localFlag
+	}
+	if courseInput == "" && fs.NArg() > 0 {
+		courseInput = fs.Arg(0)
 	}
 
-	targetDir := *destDir
-	if targetDir == "" {
-		targetDir = courseSlug
+	if courseInput == "" {
+		return fmt.Errorf("course directory is required: mentor-client init --course <path-to-course> [--dir <target>]")
 	}
-
-	fmt.Printf("%s[mentor-client]%s Initializing course %s%q%s...\n", colorCyan, colorReset, colorBold, courseSlug, colorReset)
 
 	starterFiles := make(map[string]string)
+	var courseSlug string
 	var language string
 	currentLevel := 1
 
-	if *localPath != "" {
-		// Local mode: load directly from generated course directory
-		fmt.Printf("[mentor-client] Loading from local curriculum at %s\n", *localPath)
-		absLocal, err := filepath.Abs(*localPath)
-		if err != nil {
-			return err
+	// Check if courseInput points to a local directory on disk
+	absCourse, err := filepath.Abs(courseInput)
+	isLocalDir := false
+	if err == nil {
+		if info, err := os.Stat(absCourse); err == nil && info.IsDir() {
+			isLocalDir = true
 		}
+	}
 
-		info, err := os.Stat(absLocal)
-		if err != nil || !info.IsDir() {
-			return fmt.Errorf("local curriculum directory does not exist: %s", absLocal)
-		}
+	if isLocalDir {
+		// Local mode: directly read from the course directory specified from terminal!
+		fmt.Printf("%s[mentor-client]%s Reading course from: %s%s%s\n", colorCyan, colorReset, colorBold, absCourse, colorReset)
 
 		// 1. Try starter directory
-		starterDir := filepath.Join(absLocal, "starter")
+		starterDir := filepath.Join(absCourse, "starter")
 		if info, err := os.Stat(starterDir); err == nil && info.IsDir() {
 			files, err := workspace.CollectFiles(starterDir)
 			if err == nil && len(files) > 0 {
@@ -171,18 +179,31 @@ func runInit(args []string) error {
 			}
 		}
 
-		// 2. Read curriculum manifest if exists
-		manifestPath := filepath.Join(absLocal, "curriculum.json")
+		// 2. Read curriculum manifest to auto-detect course slug and language
+		manifestPath := filepath.Join(absCourse, "curriculum.json")
 		if data, err := os.ReadFile(manifestPath); err == nil {
 			var cur struct {
-				Language string `json:"target_language"`
-				Request  struct {
+				CourseSlug string `json:"course_slug"`
+				Slug       string `json:"slug"`
+				Language   string `json:"target_language"`
+				Request    struct {
+					Project struct {
+						Slug string `json:"slug"`
+					} `json:"project"`
 					Target struct {
 						Language string `json:"language"`
 					} `json:"target"`
 				} `json:"request"`
 			}
 			if err := json.Unmarshal(data, &cur); err == nil {
+				courseSlug = cur.CourseSlug
+				if courseSlug == "" {
+					courseSlug = cur.Slug
+				}
+				if courseSlug == "" {
+					courseSlug = cur.Request.Project.Slug
+				}
+
 				language = cur.Language
 				if language == "" {
 					language = cur.Request.Target.Language
@@ -190,23 +211,32 @@ func runInit(args []string) error {
 			}
 		}
 
-		// If no starter files existed in export, generate standard fallback skeleton
+		if courseSlug == "" {
+			courseSlug = filepath.Base(absCourse)
+		}
+		if language == "" {
+			language = "go"
+		}
+
+		// Fallback skeleton if starter dir was empty
 		if len(starterFiles) == 0 {
-			if language == "" {
-				language = "go"
-			}
 			if language == "go" {
 				starterFiles["main.go"] = "package main\n\nfunc main() {\n\t// TODO: Implement your solution here\n}\n"
 				starterFiles["go.mod"] = fmt.Sprintf("module %s\n\ngo 1.22\n", courseSlug)
 			}
 		}
 
+		targetDir := *destDir
+		if targetDir == "" {
+			targetDir = courseSlug
+		}
+
 		if err := workspace.ScaffoldWorkspace(targetDir, starterFiles); err != nil {
 			return err
 		}
 
 		cfg := &config.WorkspaceConfig{
-			LocalPath:    absLocal,
+			LocalPath:    absCourse,
 			CourseSlug:   courseSlug,
 			CurrentLevel: currentLevel,
 			Language:     language,
@@ -215,66 +245,107 @@ func runInit(args []string) error {
 			return err
 		}
 
-	} else {
-		// Server mode
-		if *serverURL == "" {
-			*serverURL = "http://localhost:8080"
-		}
-		client := api.NewClient(*serverURL, "")
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-
-		starterResp, err := client.GetStarter(ctx, courseSlug, currentLevel)
-		if err != nil {
-			return fmt.Errorf("failed to fetch starter code from server: %w", err)
+		fmt.Printf("%s✔ Workspace successfully scaffolded in %s/%s\n", colorGreen, targetDir, colorReset)
+		fmt.Printf("Course Slug:   %s\n", courseSlug)
+		fmt.Printf("Language:      %s\n", language)
+		fmt.Printf("Starter Files: %d files created\n", len(starterFiles))
+		for f := range starterFiles {
+			fmt.Printf("  • %s\n", f)
 		}
 
-		starterFiles = starterResp.Files
-		language = starterResp.Language
-
-		if err := workspace.ScaffoldWorkspace(targetDir, starterFiles); err != nil {
-			return err
-		}
-
-		cfg := &config.WorkspaceConfig{
-			ServerURL:    *serverURL,
-			CourseSlug:   courseSlug,
-			CurrentLevel: currentLevel,
-			Language:     language,
-		}
-		if err := config.SaveConfig(targetDir, cfg); err != nil {
-			return err
-		}
+		fmt.Printf("\n%sNext steps:%s\n", colorBold, colorReset)
+		fmt.Printf("  1. cd %s\n", targetDir)
+		fmt.Printf("  2. mentor-client brief      # Inspect level 1 requirements\n")
+		fmt.Printf("  3. mentor-client submit     # Test your solution!\n\n")
+		return nil
 	}
 
-	fmt.Printf("%s✔ Workspace successfully scaffolded in %s/%s\n", colorGreen, targetDir, colorReset)
-	fmt.Printf("Initial starter files created (%d files):\n", len(starterFiles))
-	for f := range starterFiles {
-		fmt.Printf("  • %s\n", f)
+	// Server mode
+	courseSlug = courseInput
+	targetDir := *destDir
+	if targetDir == "" {
+		targetDir = courseSlug
 	}
 
-	fmt.Printf("\n%sNext steps:%s\n", colorBold, colorReset)
-	fmt.Printf("  1. cd %s\n", targetDir)
-	fmt.Printf("  2. mentor-client brief      # Read the instructions for Level 1\n")
-	fmt.Printf("  3. mentor-client submit     # Submit your code when ready!\n\n")
+	srv := *serverURL
+	if srv == "" {
+		srv = "http://localhost:8080"
+	}
 
+	client := api.NewClient(srv, "")
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	fmt.Printf("%s[mentor-client]%s Fetching starter from server %s for %q...\n", colorCyan, colorReset, srv, courseSlug)
+	starterResp, err := client.GetStarter(ctx, courseSlug, currentLevel)
+	if err != nil {
+		return fmt.Errorf("failed to fetch starter code from server: %w", err)
+	}
+
+	starterFiles = starterResp.Files
+	language = starterResp.Language
+
+	if err := workspace.ScaffoldWorkspace(targetDir, starterFiles); err != nil {
+		return err
+	}
+
+	cfg := &config.WorkspaceConfig{
+		ServerURL:    srv,
+		CourseSlug:   courseSlug,
+		CurrentLevel: currentLevel,
+		Language:     language,
+	}
+	if err := config.SaveConfig(targetDir, cfg); err != nil {
+		return err
+	}
+
+	fmt.Printf("%s✔ Workspace scaffolded in %s/%s\n", colorGreen, targetDir, colorReset)
 	return nil
 }
 
 func runStatus(args []string) error {
-	dir, cfg, err := findWorkspaceDir()
-	if err != nil {
+	fs := flag.NewFlagSet("status", flag.ExitOnError)
+	courseFlag := fs.String("course", "", "Path to local course directory")
+	if err := fs.Parse(rearrangeArgs(args)); err != nil {
 		return err
 	}
 
+	var coursePath string
+	var courseSlug string
+	var currentLevel int
+	var workspaceDir string
+
+	dir, cfg, err := findWorkspaceDir()
+	if err == nil {
+		workspaceDir = dir
+		coursePath = cfg.LocalPath
+		courseSlug = cfg.CourseSlug
+		currentLevel = cfg.CurrentLevel
+	}
+
+	if *courseFlag != "" {
+		abs, err := filepath.Abs(*courseFlag)
+		if err == nil {
+			coursePath = abs
+			courseSlug = filepath.Base(abs)
+			if currentLevel == 0 {
+				currentLevel = 1
+			}
+		}
+	}
+
+	if coursePath == "" && courseSlug == "" {
+		return fmt.Errorf("not in a workspace and no --course specified (run with --course <path> or inside a workspace)")
+	}
+
 	fmt.Printf("%s[mentor-client status]%s\n", colorCyan, colorReset)
-	fmt.Printf("Workspace Directory: %s\n", dir)
-	fmt.Printf("Course:              %s%s%s\n", colorBold, cfg.CourseSlug, colorReset)
-	fmt.Printf("Active Level:        %sLevel %d%s\n", colorYellow, cfg.CurrentLevel, colorReset)
-	if cfg.ServerURL != "" {
-		fmt.Printf("Connected Server:    %s\n", cfg.ServerURL)
-	} else if cfg.LocalPath != "" {
-		fmt.Printf("Local Curriculum:    %s\n", cfg.LocalPath)
+	if workspaceDir != "" {
+		fmt.Printf("Workspace Directory: %s\n", workspaceDir)
+	}
+	fmt.Printf("Course:              %s%s%s\n", colorBold, courseSlug, colorReset)
+	fmt.Printf("Active Level:        %sLevel %d%s\n", colorYellow, currentLevel, colorReset)
+	if coursePath != "" {
+		fmt.Printf("Curriculum Source:   %s\n", coursePath)
 	}
 
 	fmt.Printf("\nRun %smentor-client brief%s to inspect level objectives.\n", colorBold, colorReset)
@@ -282,21 +353,56 @@ func runStatus(args []string) error {
 }
 
 func runBrief(args []string) error {
-	_, cfg, err := findWorkspaceDir()
-	if err != nil {
+	fs := flag.NewFlagSet("brief", flag.ExitOnError)
+	courseFlag := fs.String("course", "", "Path to course curriculum directory")
+	levelFlag := fs.Int("level", 0, "Specific level number to inspect")
+
+	if err := fs.Parse(rearrangeArgs(args)); err != nil {
 		return err
 	}
 
+	var coursePath string
+	var courseSlug string
+	var currentLevel int
+	var serverURL string
+	var token string
+
+	_, cfg, err := findWorkspaceDir()
+	if err == nil {
+		coursePath = cfg.LocalPath
+		courseSlug = cfg.CourseSlug
+		currentLevel = cfg.CurrentLevel
+		serverURL = cfg.ServerURL
+		token = cfg.StudentToken
+	}
+
+	if *courseFlag != "" {
+		abs, err := filepath.Abs(*courseFlag)
+		if err == nil {
+			coursePath = abs
+			courseSlug = filepath.Base(abs)
+		}
+	}
+
+	if *levelFlag > 0 {
+		currentLevel = *levelFlag
+	} else if currentLevel == 0 {
+		currentLevel = 1
+	}
+
+	if coursePath == "" && serverURL == "" {
+		return fmt.Errorf("no course specified: provide --course <path> or run inside a mentor workspace")
+	}
+
 	fmt.Printf("\n%s============================================================%s\n", colorCyan, colorReset)
-	fmt.Printf("%s  LEVEL %d BRIEF — %s%s\n", colorBold, cfg.CurrentLevel, strings.ToUpper(cfg.CourseSlug), colorReset)
+	fmt.Printf("%s  LEVEL %d BRIEF — %s%s\n", colorBold, currentLevel, strings.ToUpper(courseSlug), colorReset)
 	fmt.Printf("%s============================================================%s\n\n", colorCyan, colorReset)
 
-	if cfg.LocalPath != "" {
-		// Look for doc in local curriculum
-		// In local mode, always prioritize the leak-free student projection bundle
-		studentBundlePath := filepath.Join(cfg.LocalPath, "bundles", "curriculum.student.json")
+	if coursePath != "" {
+		// Read directly from coursePath
+		studentBundlePath := filepath.Join(coursePath, "bundles", "curriculum.student.json")
 		if _, err := os.Stat(studentBundlePath); os.IsNotExist(err) {
-			studentBundlePath = filepath.Join(cfg.LocalPath, "curriculum.student.json")
+			studentBundlePath = filepath.Join(coursePath, "curriculum.student.json")
 		}
 
 		if data, err := os.ReadFile(studentBundlePath); err == nil {
@@ -322,7 +428,7 @@ func runBrief(args []string) error {
 			}
 			if err := json.Unmarshal(data, &cur); err == nil {
 				for _, l := range cur.Levels {
-					if l.Order == cfg.CurrentLevel {
+					if l.Order == currentLevel {
 						fmt.Printf("%sTitle:%s      %s (%s)\n", colorBold, colorReset, l.Title, strings.ToUpper(l.Difficulty))
 						fmt.Printf("%sGoal:%s       %s\n\n", colorBold, colorReset, l.Goal)
 
@@ -371,16 +477,16 @@ func runBrief(args []string) error {
 			}
 		}
 
-		fmt.Printf("Level %d documentation is ready. Implement the requested behavior and submit!\n", cfg.CurrentLevel)
+		fmt.Printf("Level %d brief is ready in %s. Implement the requested behavior and submit!\n", currentLevel, coursePath)
 		return nil
 	}
 
 	// Server mode
-	client := api.NewClient(cfg.ServerURL, cfg.StudentToken)
+	client := api.NewClient(serverURL, token)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	brief, err := client.GetBrief(ctx, cfg.CourseSlug, cfg.CurrentLevel)
+	brief, err := client.GetBrief(ctx, courseSlug, currentLevel)
 	if err != nil {
 		return err
 	}
@@ -405,18 +511,14 @@ func runBrief(args []string) error {
 }
 
 func runHint(args []string) error {
-	_, cfg, err := findWorkspaceDir()
-	if err != nil {
-		return err
-	}
-
 	tier := 1
 	if len(args) > 0 {
 		fmt.Sscanf(args[0], "%d", &tier)
 	}
 
-	if cfg.ServerURL == "" {
-		fmt.Printf("%s[mentor-client]%s Hints in local mode are embedded in the level doc.\n", colorYellow, colorReset)
+	_, cfg, err := findWorkspaceDir()
+	if err != nil || cfg.ServerURL == "" {
+		fmt.Printf("%s[mentor-client]%s In local mode, conceptual guidance is detailed in the level brief.\n", colorYellow, colorReset)
 		return nil
 	}
 
@@ -434,23 +536,67 @@ func runHint(args []string) error {
 }
 
 func runSubmit(args []string) error {
-	dir, cfg, err := findWorkspaceDir()
-	if err != nil {
+	fs := flag.NewFlagSet("submit", flag.ExitOnError)
+	courseFlag := fs.String("course", "", "Path to course curriculum directory")
+	levelFlag := fs.Int("level", 0, "Specific level number to verify against")
+	dirFlag := fs.String("dir", "", "Target directory containing student code to submit (default: current directory)")
+
+	if err := fs.Parse(rearrangeArgs(args)); err != nil {
 		return err
 	}
 
-	files, err := workspace.CollectFiles(dir)
+	var coursePath string
+	var currentLevel int
+	var serverURL string
+	var token string
+	var language string
+	var workspaceDir string
+
+	dir, cfg, err := findWorkspaceDir()
+	if err == nil {
+		workspaceDir = dir
+		coursePath = cfg.LocalPath
+		currentLevel = cfg.CurrentLevel
+		serverURL = cfg.ServerURL
+		token = cfg.StudentToken
+		language = cfg.Language
+	}
+
+	if *dirFlag != "" {
+		workspaceDir = *dirFlag
+	} else if workspaceDir == "" {
+		workspaceDir = "."
+	}
+
+	if *courseFlag != "" {
+		abs, err := filepath.Abs(*courseFlag)
+		if err == nil {
+			coursePath = abs
+		}
+	}
+
+	if *levelFlag > 0 {
+		currentLevel = *levelFlag
+	} else if currentLevel == 0 {
+		currentLevel = 1
+	}
+
+	if coursePath == "" && serverURL == "" {
+		return fmt.Errorf("no course source found: run inside workspace or specify --course <path>")
+	}
+
+	files, err := workspace.CollectFiles(workspaceDir)
 	if err != nil {
 		return fmt.Errorf("collecting files: %w", err)
 	}
 
 	if len(files) == 0 {
-		return fmt.Errorf("no source code files found to submit in %s", dir)
+		return fmt.Errorf("no source code files found to submit in %s", workspaceDir)
 	}
 
-	fmt.Printf("%s[mentor-client]%s Packaging %d source files for %sLevel %d%s...\n", colorCyan, colorReset, len(files), colorBold, cfg.CurrentLevel, colorReset)
+	fmt.Printf("%s[mentor-client]%s Packaging %d source files for %sLevel %d%s...\n", colorCyan, colorReset, len(files), colorBold, currentLevel, colorReset)
 
-	if cfg.ServerURL == "" {
+	if serverURL == "" {
 		// Real local verification mode
 		fmt.Printf("%s[local-eval]%s Executing test verification in local mode...\n", colorYellow, colorReset)
 
@@ -466,9 +612,9 @@ func runSubmit(args []string) error {
 		var cases []SpecCase
 
 		// 1. Locate spec for current level
-		specFile := filepath.Join(cfg.LocalPath, "server", "specs", fmt.Sprintf("level-%02d.spec.json", cfg.CurrentLevel))
+		specFile := filepath.Join(coursePath, "server", "specs", fmt.Sprintf("level-%02d.spec.json", currentLevel))
 		if _, err := os.Stat(specFile); os.IsNotExist(err) {
-			specFile = filepath.Join(cfg.LocalPath, "server", "specs", fmt.Sprintf("level-%d.spec.json", cfg.CurrentLevel))
+			specFile = filepath.Join(coursePath, "server", "specs", fmt.Sprintf("level-%d.spec.json", currentLevel))
 		}
 
 		if data, err := os.ReadFile(specFile); err == nil {
@@ -484,7 +630,7 @@ func runSubmit(args []string) error {
 
 		if len(cases) == 0 {
 			// Fallback: look in curriculum.json
-			curPath := filepath.Join(cfg.LocalPath, "curriculum.json")
+			curPath := filepath.Join(coursePath, "curriculum.json")
 			if data, err := os.ReadFile(curPath); err == nil {
 				var cur struct {
 					Levels []struct {
@@ -496,7 +642,7 @@ func runSubmit(args []string) error {
 				}
 				if err := json.Unmarshal(data, &cur); err == nil {
 					for _, l := range cur.Levels {
-						if l.Order == cfg.CurrentLevel {
+						if l.Order == currentLevel {
 							cases = l.AgnosticTestSpec.Cases
 							break
 						}
@@ -506,7 +652,7 @@ func runSubmit(args []string) error {
 		}
 
 		if len(cases) == 0 {
-			return fmt.Errorf("no test cases found for level %d in local curriculum at %s", cfg.CurrentLevel, cfg.LocalPath)
+			return fmt.Errorf("no test cases found for level %d in local curriculum at %s", currentLevel, coursePath)
 		}
 
 		predefinedPassed, predefinedTotal := 0, 0
@@ -525,7 +671,7 @@ func runSubmit(args []string) error {
 			// Run code locally in student workspace dir
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var cmd *exec.Cmd
-			switch strings.ToLower(cfg.Language) {
+			switch strings.ToLower(language) {
 			case "python", "py", "python3":
 				cmd = exec.CommandContext(ctx, "python3", "main.py")
 			case "rust":
@@ -533,7 +679,7 @@ func runSubmit(args []string) error {
 			default: // go
 				cmd = exec.CommandContext(ctx, "go", "run", ".")
 			}
-			cmd.Dir = dir
+			cmd.Dir = workspaceDir
 			if tc.Stdin != "" {
 				cmd.Stdin = strings.NewReader(tc.Stdin)
 			}
@@ -588,21 +734,23 @@ func runSubmit(args []string) error {
 		if dynamicTotal > 0 {
 			fmt.Printf("%s✔ [2/2] Dynamic Dual Oracle:     PASSED (%d/%d vectors)%s\n", colorGreen, dynamicPassed, dynamicTotal, colorReset)
 		}
-		fmt.Printf("\n%s🎉 LEVEL %d CERTIFIED VERIFIED!%s\n", colorGreen, cfg.CurrentLevel, colorReset)
+		fmt.Printf("\n%s🎉 LEVEL %d CERTIFIED VERIFIED!%s\n", colorGreen, currentLevel, colorReset)
 
-		cfg.CurrentLevel++
-		_ = config.SaveConfig(dir, cfg)
-		fmt.Printf("Unlocked Level %d! Run %smentor-client brief%s for the next challenge.\n", cfg.CurrentLevel, colorBold, colorReset)
+		if cfg != nil {
+			cfg.CurrentLevel++
+			_ = config.SaveConfig(workspaceDir, cfg)
+			fmt.Printf("Unlocked Level %d! Run %smentor-client brief%s for the next challenge.\n", cfg.CurrentLevel, colorBold, colorReset)
+		}
 		return nil
 	}
 
-	// Server mode with real Dynamic Dual Oracle!
-	client := api.NewClient(cfg.ServerURL, cfg.StudentToken)
+	// Server mode
+	client := api.NewClient(serverURL, token)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	fmt.Println("Sending code to authoritative sandbox...")
-	resp, err := client.Submit(ctx, cfg.CourseSlug, cfg.CurrentLevel, cfg.Language, files)
+	resp, err := client.Submit(ctx, cfg.CourseSlug, currentLevel, language, files)
 	if err != nil {
 		return err
 	}
@@ -612,12 +760,14 @@ func runSubmit(args []string) error {
 			fmt.Printf("%s✔ [1/2] Predefined Verification: PASSED (%d/%d cases)%s\n", colorGreen, resp.Oracle.PredefinedCount, resp.Oracle.PredefinedTotal, colorReset)
 			fmt.Printf("%s✔ [2/2] Dynamic Dual Oracle:     PASSED (%d/%d vectors)%s\n", colorGreen, resp.Oracle.DynamicCount, resp.Oracle.DynamicTotal, colorReset)
 		}
-		fmt.Printf("\n%s🎉 LEVEL %d CERTIFIED VERIFIED!%s\n", colorGreen, cfg.CurrentLevel, colorReset)
+		fmt.Printf("\n%s🎉 LEVEL %d CERTIFIED VERIFIED!%s\n", colorGreen, currentLevel, colorReset)
 		fmt.Printf("%s\n", resp.Diagnostic)
 
-		cfg.CurrentLevel++
-		_ = config.SaveConfig(dir, cfg)
-		fmt.Printf("\nUnlocked Level %d! Run %smentor-client brief%s for your next challenge.\n", cfg.CurrentLevel, colorBold, colorReset)
+		if cfg != nil {
+			cfg.CurrentLevel++
+			_ = config.SaveConfig(workspaceDir, cfg)
+			fmt.Printf("\nUnlocked Level %d! Run %smentor-client brief%s for your next challenge.\n", cfg.CurrentLevel, colorBold, colorReset)
+		}
 	} else {
 		fmt.Printf("\n%s❌ SUBMISSION FAILED (%s)%s\n", colorRed, resp.Outcome, colorReset)
 		if resp.Diagnostic != "" {
