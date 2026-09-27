@@ -221,7 +221,25 @@ func runInit(args []string) error {
 		// Fallback skeleton if starter dir was empty
 		if len(starterFiles) == 0 {
 			if language == "go" {
-				starterFiles["main.go"] = "package main\n\nfunc main() {\n\t// TODO: Implement your solution here\n}\n"
+				starterFiles["main.go"] = `package main
+
+import "fmt"
+
+func main() {
+	// ============================================================================
+	// 🚀 LEVEL 1 KICKSTART: ONBOARDING INTRO
+	// ============================================================================
+	// Welcome! Level 1 is already solved for you so you can experience the
+	// automated verification and testing workflow without friction.
+	//
+	// Step 1: UNCOMMENT the line below:
+	// fmt.Print("$ ")
+	//
+	// Step 2: Save this file and run:
+	//   mentor-client submit
+	// ============================================================================
+}
+`
 				starterFiles["go.mod"] = fmt.Sprintf("module %s\n\ngo 1.22\n", courseSlug)
 			}
 		}
@@ -251,6 +269,12 @@ func runInit(args []string) error {
 		fmt.Printf("Starter Files: %d files created\n", len(starterFiles))
 		for f := range starterFiles {
 			fmt.Printf("  • %s\n", f)
+		}
+
+		if currentLevel == 1 {
+			fmt.Printf("\n%s💡 LEVEL 1 KICKSTART:%s\n", colorYellow, colorReset)
+			fmt.Println("  Level 1 is already solved for you in your starter code (main.go)!")
+			fmt.Println("  Simply open main.go, uncomment the code block, and run 'mentor-client submit'.")
 		}
 
 		fmt.Printf("\n%sNext steps:%s\n", colorBold, colorReset)
@@ -366,6 +390,7 @@ func runBrief(args []string) error {
 	var currentLevel int
 	var serverURL string
 	var token string
+	var language string
 
 	_, cfg, err := findWorkspaceDir()
 	if err == nil {
@@ -374,6 +399,7 @@ func runBrief(args []string) error {
 		currentLevel = cfg.CurrentLevel
 		serverURL = cfg.ServerURL
 		token = cfg.StudentToken
+		language = cfg.Language
 	}
 
 	if *courseFlag != "" {
@@ -407,7 +433,11 @@ func runBrief(args []string) error {
 
 		if data, err := os.ReadFile(studentBundlePath); err == nil {
 			var cur struct {
+				Curriculum struct {
+					TargetLanguage string `json:"target_language"`
+				} `json:"curriculum"`
 				Levels []struct {
+					ID                 string   `json:"id"`
 					Order              int      `json:"order"`
 					Title              string   `json:"title"`
 					Goal               string   `json:"goal"`
@@ -429,8 +459,29 @@ func runBrief(args []string) error {
 			if err := json.Unmarshal(data, &cur); err == nil {
 				for _, l := range cur.Levels {
 					if l.Order == currentLevel {
+						lang := language
+						if lang == "" {
+							lang = cur.Curriculum.TargetLanguage
+						}
+						if lang == "" {
+							lang = "go"
+						}
+
 						fmt.Printf("%sTitle:%s      %s (%s)\n", colorBold, colorReset, l.Title, strings.ToUpper(l.Difficulty))
 						fmt.Printf("%sGoal:%s       %s\n\n", colorBold, colorReset, l.Goal)
+
+						// 1. Narrator Hook
+						if l.Narrative.Hook != "" {
+							fmt.Printf("%s🎙️ NARRATOR:%s\n%s\"%s\"%s\n\n", colorCyan, colorReset, colorBold, l.Narrative.Hook, colorReset)
+						}
+
+						// 2. Special Level 1 Kickstart Notice
+						if currentLevel == 1 {
+							fmt.Printf("%s⚡ LEVEL 1 KICKSTART NOTICE:%s\n", colorYellow, colorReset)
+							fmt.Println("  Level 1 is already solved for you in your starter code!")
+							fmt.Println("  Open main.go, simply UNCOMMENT the code block, and run 'mentor-client submit'.")
+							fmt.Println()
+						}
 
 						if l.Narrative.Motivation != "" {
 							fmt.Printf("%sWhy This Matters:%s\n%s\n\n", colorBold, colorReset, l.Narrative.Motivation)
@@ -470,6 +521,9 @@ func runBrief(args []string) error {
 							}
 							fmt.Println()
 						}
+
+						// 3. Render Document Engine Artifacts (Theory, Language Cheat Sheet, MCQs, Mini-Challenges)
+						renderEducationalDocs(coursePath, l.ID, lang)
 
 						return nil
 					}
