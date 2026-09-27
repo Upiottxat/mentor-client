@@ -1,0 +1,10 @@
+# Root binary
+/mentor-client
+*.exe
+*.bin
+*.out
+
+# Test and scratch artifacts
+scratch/
+*.tmp
+*.log
