@@ -425,110 +425,153 @@ func runBrief(args []string) error {
 	fmt.Printf("%s============================================================%s\n\n", colorCyan, colorReset)
 
 	if coursePath != "" {
-		// Read directly from coursePath
-		studentBundlePath := filepath.Join(coursePath, "bundles", "curriculum.student.json")
-		if _, err := os.Stat(studentBundlePath); os.IsNotExist(err) {
-			studentBundlePath = filepath.Join(coursePath, "curriculum.student.json")
+		type levelInfo struct {
+			ID                 string   `json:"id"`
+			Order              int      `json:"order"`
+			Title              string   `json:"title"`
+			Goal               string   `json:"goal"`
+			Difficulty         string   `json:"difficulty"`
+			Narrative          struct {
+				Hook         string `json:"hook"`
+				Motivation   string `json:"motivation"`
+				ConcreteDemo string `json:"concrete_demo"`
+			} `json:"narrative"`
+			LearningObjectives []string `json:"learning_objectives"`
+			Constraints        []string `json:"constraints"`
+			Deliverables       []string `json:"deliverables"`
+			Behaviors          []struct {
+				ID          string `json:"id"`
+				Description string `json:"description"`
+			} `json:"behaviors"`
 		}
 
-		if data, err := os.ReadFile(studentBundlePath); err == nil {
+		var targetLevel *levelInfo
+		var detectedLang string
+
+		candidateBundlePaths := []string{
+			filepath.Join(coursePath, "bundles", "curriculum.student.json"),
+			filepath.Join(coursePath, "curriculum.student.json"),
+			filepath.Join(coursePath, "bundles", "curriculum.full.json"),
+			filepath.Join(coursePath, "curriculum.json"),
+		}
+
+		for _, bPath := range candidateBundlePaths {
+			data, err := os.ReadFile(bPath)
+			if err != nil {
+				continue
+			}
 			var cur struct {
 				Curriculum struct {
 					TargetLanguage string `json:"target_language"`
 				} `json:"curriculum"`
-				Levels []struct {
-					ID                 string   `json:"id"`
-					Order              int      `json:"order"`
-					Title              string   `json:"title"`
-					Goal               string   `json:"goal"`
-					Difficulty         string   `json:"difficulty"`
-					Narrative          struct {
-						Hook         string `json:"hook"`
-						Motivation   string `json:"motivation"`
-						ConcreteDemo string `json:"concrete_demo"`
-					} `json:"narrative"`
-					LearningObjectives []string `json:"learning_objectives"`
-					Constraints        []string `json:"constraints"`
-					Deliverables       []string `json:"deliverables"`
-					Behaviors          []struct {
-						ID          string `json:"id"`
-						Description string `json:"description"`
-					} `json:"behaviors"`
-				} `json:"levels"`
+				TargetLanguage string      `json:"target_language"`
+				Levels         []levelInfo `json:"levels"`
 			}
-			if err := json.Unmarshal(data, &cur); err == nil {
-				for _, l := range cur.Levels {
-					if l.Order == currentLevel {
-						lang := language
-						if lang == "" {
-							lang = cur.Curriculum.TargetLanguage
-						}
-						if lang == "" {
-							lang = "go"
-						}
-
-						fmt.Printf("%sTitle:%s      %s (%s)\n", colorBold, colorReset, l.Title, strings.ToUpper(l.Difficulty))
-						fmt.Printf("%sGoal:%s       %s\n\n", colorBold, colorReset, l.Goal)
-
-						// 1. Narrator Hook
-						if l.Narrative.Hook != "" {
-							fmt.Printf("%s🎙️ NARRATOR:%s\n%s\"%s\"%s\n\n", colorCyan, colorReset, colorBold, l.Narrative.Hook, colorReset)
-						}
-
-						// 2. Special Level 1 Kickstart Notice
-						if currentLevel == 1 {
-							fmt.Printf("%s⚡ LEVEL 1 KICKSTART NOTICE:%s\n", colorYellow, colorReset)
-							fmt.Println("  Level 1 is already solved for you in your starter code!")
-							fmt.Println("  Open main.go, simply UNCOMMENT the code block, and run 'mentor-client submit'.")
-							fmt.Println()
-						}
-
-						if l.Narrative.Motivation != "" {
-							fmt.Printf("%sWhy This Matters:%s\n%s\n\n", colorBold, colorReset, l.Narrative.Motivation)
-						}
-						if l.Narrative.ConcreteDemo != "" {
-							fmt.Printf("%sExpected Demo:%s\n%s\n\n", colorBold, colorReset, l.Narrative.ConcreteDemo)
-						}
-
-						if len(l.LearningObjectives) > 0 {
-							fmt.Printf("%sLearning Objectives:%s\n", colorBold, colorReset)
-							for _, obj := range l.LearningObjectives {
-								fmt.Printf("  • %s\n", obj)
-							}
-							fmt.Println()
-						}
-
-						if len(l.Constraints) > 0 {
-							fmt.Printf("%sPublic Constraints:%s\n", colorBold, colorReset)
-							for _, c := range l.Constraints {
-								fmt.Printf("  • %s\n", c)
-							}
-							fmt.Println()
-						}
-
-						if len(l.Deliverables) > 0 {
-							fmt.Printf("%sDeliverables:%s\n", colorBold, colorReset)
-							for _, d := range l.Deliverables {
-								fmt.Printf("  • %s\n", d)
-							}
-							fmt.Println()
-						}
-
-						if len(l.Behaviors) > 0 {
-							fmt.Printf("%sRequired Behaviors:%s\n", colorBold, colorReset)
-							for _, b := range l.Behaviors {
-								fmt.Printf("  • [%s]: %s\n", b.ID, b.Description)
-							}
-							fmt.Println()
-						}
-
-						// 3. Render Document Engine Artifacts (Theory, Language Cheat Sheet, MCQs, Mini-Challenges)
-						renderEducationalDocs(coursePath, l.ID, lang)
-
-						return nil
+			if err := json.Unmarshal(data, &cur); err == nil && len(cur.Levels) > 0 {
+				if cur.Curriculum.TargetLanguage != "" {
+					detectedLang = cur.Curriculum.TargetLanguage
+				} else if cur.TargetLanguage != "" {
+					detectedLang = cur.TargetLanguage
+				}
+				for i := range cur.Levels {
+					if cur.Levels[i].Order == currentLevel {
+						targetLevel = &cur.Levels[i]
+						break
 					}
 				}
+				if targetLevel != nil {
+					break
+				}
 			}
+		}
+
+		// Fallback to individual level files if not found in bundle
+		if targetLevel == nil {
+			candidateLevelFiles := []string{
+				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%02d.json", currentLevel)),
+				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%d.json", currentLevel)),
+			}
+			for _, lPath := range candidateLevelFiles {
+				data, err := os.ReadFile(lPath)
+				if err != nil {
+					continue
+				}
+				var lvl levelInfo
+				if err := json.Unmarshal(data, &lvl); err == nil && (lvl.Title != "" || lvl.Goal != "") {
+					targetLevel = &lvl
+					break
+				}
+			}
+		}
+
+		if targetLevel != nil {
+			lang := language
+			if lang == "" {
+				lang = detectedLang
+			}
+			if lang == "" {
+				lang = "go"
+			}
+
+			fmt.Printf("%sTitle:%s      %s (%s)\n", colorBold, colorReset, targetLevel.Title, strings.ToUpper(targetLevel.Difficulty))
+			fmt.Printf("%sGoal:%s       %s\n\n", colorBold, colorReset, targetLevel.Goal)
+
+			// 1. Narrator Hook
+			if targetLevel.Narrative.Hook != "" {
+				fmt.Printf("%s🎙️ NARRATOR:%s\n%s\"%s\"%s\n\n", colorCyan, colorReset, colorBold, targetLevel.Narrative.Hook, colorReset)
+			}
+
+			// 2. Special Level 1 Kickstart Notice
+			if currentLevel == 1 {
+				fmt.Printf("%s⚡ LEVEL 1 KICKSTART NOTICE:%s\n", colorYellow, colorReset)
+				fmt.Println("  Level 1 is already solved for you in your starter code!")
+				fmt.Println("  Open main.go, simply UNCOMMENT the code block, and run 'mentor-client submit'.")
+				fmt.Println()
+			}
+
+			if targetLevel.Narrative.Motivation != "" {
+				fmt.Printf("%sWhy This Matters:%s\n%s\n\n", colorBold, colorReset, targetLevel.Narrative.Motivation)
+			}
+			if targetLevel.Narrative.ConcreteDemo != "" {
+				fmt.Printf("%sExpected Demo:%s\n%s\n\n", colorBold, colorReset, targetLevel.Narrative.ConcreteDemo)
+			}
+
+			if len(targetLevel.LearningObjectives) > 0 {
+				fmt.Printf("%sLearning Objectives:%s\n", colorBold, colorReset)
+				for _, obj := range targetLevel.LearningObjectives {
+					fmt.Printf("  • %s\n", obj)
+				}
+				fmt.Println()
+			}
+
+			if len(targetLevel.Constraints) > 0 {
+				fmt.Printf("%sPublic Constraints:%s\n", colorBold, colorReset)
+				for _, c := range targetLevel.Constraints {
+					fmt.Printf("  • %s\n", c)
+				}
+				fmt.Println()
+			}
+
+			if len(targetLevel.Deliverables) > 0 {
+				fmt.Printf("%sDeliverables:%s\n", colorBold, colorReset)
+				for _, d := range targetLevel.Deliverables {
+					fmt.Printf("  • %s\n", d)
+				}
+				fmt.Println()
+			}
+
+			if len(targetLevel.Behaviors) > 0 {
+				fmt.Printf("%sRequired Behaviors:%s\n", colorBold, colorReset)
+				for _, b := range targetLevel.Behaviors {
+					fmt.Printf("  • [%s]: %s\n", b.ID, b.Description)
+				}
+				fmt.Println()
+			}
+
+			// 3. Render Document Engine Artifacts (Theory, Language Cheat Sheet, MCQs, Mini-Challenges)
+			renderEducationalDocs(coursePath, targetLevel.ID, lang)
+
+			return nil
 		}
 
 		fmt.Printf("Level %d brief is ready in %s. Implement the requested behavior and submit!\n", currentLevel, coursePath)
@@ -676,30 +719,88 @@ func runSubmit(args []string) error {
 				AgnosticTestSpec struct {
 					Cases []SpecCase `json:"cases"`
 				} `json:"agnostic_test_spec"`
+				DemoCases []SpecCase `json:"demo_cases"`
 			}
 			if err := json.Unmarshal(data, &specData); err == nil {
 				cases = specData.AgnosticTestSpec.Cases
+				for i, dc := range specData.DemoCases {
+					if dc.Name == "" {
+						dc.Name = fmt.Sprintf("demo-%d", i+1)
+					}
+					cases = append(cases, dc)
+				}
 			}
 		}
 
 		if len(cases) == 0 {
-			// Fallback: look in curriculum.json
-			curPath := filepath.Join(coursePath, "curriculum.json")
-			if data, err := os.ReadFile(curPath); err == nil {
+			// Fallback: look in candidate bundle files
+			candidateBundlePaths := []string{
+				filepath.Join(coursePath, "curriculum.json"),
+				filepath.Join(coursePath, "bundles", "curriculum.student.json"),
+				filepath.Join(coursePath, "curriculum.student.json"),
+				filepath.Join(coursePath, "bundles", "curriculum.full.json"),
+			}
+			for _, curPath := range candidateBundlePaths {
+				data, err := os.ReadFile(curPath)
+				if err != nil {
+					continue
+				}
 				var cur struct {
 					Levels []struct {
 						Order            int `json:"order"`
 						AgnosticTestSpec struct {
 							Cases []SpecCase `json:"cases"`
 						} `json:"agnostic_test_spec"`
+						DemoCases []SpecCase `json:"demo_cases"`
 					} `json:"levels"`
 				}
 				if err := json.Unmarshal(data, &cur); err == nil {
 					for _, l := range cur.Levels {
 						if l.Order == currentLevel {
 							cases = l.AgnosticTestSpec.Cases
+							for i, dc := range l.DemoCases {
+								if dc.Name == "" {
+									dc.Name = fmt.Sprintf("demo-%d", i+1)
+								}
+								cases = append(cases, dc)
+							}
 							break
 						}
+					}
+					if len(cases) > 0 {
+						break
+					}
+				}
+			}
+		}
+
+		if len(cases) == 0 {
+			// Fallback: look in individual common/levels/level-NN.json
+			candidateLevelFiles := []string{
+				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%02d.json", currentLevel)),
+				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%d.json", currentLevel)),
+			}
+			for _, lPath := range candidateLevelFiles {
+				data, err := os.ReadFile(lPath)
+				if err != nil {
+					continue
+				}
+				var lvl struct {
+					AgnosticTestSpec struct {
+						Cases []SpecCase `json:"cases"`
+					} `json:"agnostic_test_spec"`
+					DemoCases []SpecCase `json:"demo_cases"`
+				}
+				if err := json.Unmarshal(data, &lvl); err == nil {
+					cases = lvl.AgnosticTestSpec.Cases
+					for i, dc := range lvl.DemoCases {
+						if dc.Name == "" {
+							dc.Name = fmt.Sprintf("demo-%d", i+1)
+						}
+						cases = append(cases, dc)
+					}
+					if len(cases) > 0 {
+						break
 					}
 				}
 			}
@@ -750,11 +851,17 @@ func runSubmit(args []string) error {
 			}
 
 			matched := false
-			switch tc.Matcher {
-			case "trim":
+			switch strings.ToLower(strings.TrimSpace(tc.Matcher)) {
+			case "trim", "":
 				matched = (strings.TrimSpace(out) == strings.TrimSpace(tc.Expected))
 			case "contains":
 				matched = strings.Contains(out, tc.Expected)
+			case "prefix":
+				matched = strings.HasPrefix(out, tc.Expected)
+			case "suffix":
+				matched = strings.HasSuffix(out, tc.Expected)
+			case "unordered_lines", "unordered":
+				matched = matchUnorderedLines(out, tc.Expected)
 			default: // exact
 				matched = (out == tc.Expected)
 			}
@@ -836,3 +943,35 @@ func runSubmit(args []string) error {
 
 	return nil
 }
+
+// matchUnorderedLines compares two multiline strings as multisets of non-empty lines.
+func matchUnorderedLines(actual, expected string) bool {
+	actLines := extractNonEmptyLines(actual)
+	expLines := extractNonEmptyLines(expected)
+	if len(actLines) != len(expLines) {
+		return false
+	}
+	counts := make(map[string]int)
+	for _, l := range expLines {
+		counts[l]++
+	}
+	for _, l := range actLines {
+		counts[l]--
+		if counts[l] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func extractNonEmptyLines(s string) []string {
+	var lines []string
+	for _, l := range strings.Split(s, "\n") {
+		trimmed := strings.TrimSpace(l)
+		if trimmed != "" {
+			lines = append(lines, trimmed)
+		}
+	}
+	return lines
+}
+
