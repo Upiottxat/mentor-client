@@ -1,0 +1,187 @@
+[
+  {
+    "id": "repl-loop",
+    "order": 1,
+    "title": "Read-Eval-Print Loop",
+    "goal": "Establish the foundational interactive loop that displays a prompt, reads user input, and exits cleanly.",
+    "required_capabilities": [
+      {
+        "id": "display-shell-prompt",
+        "description": "Output a visible prompt indicating the shell is ready for user input."
+      },
+      {
+        "id": "read-user-input",
+        "description": "Read standard input lines from the user interactively."
+      },
+      {
+        "id": "handle-exit-command",
+        "description": "Gracefully terminate the shell upon receiving an exit command or EOF."
+      }
+    ],
+    "level_ids": [
+      "display-shell-prompt-level",
+      "level-2-read-user-input",
+      "level-3-handle-exit-command"
+    ],
+    "boss_fight": {
+      "title": "Interactive REPL Integration",
+      "public_preview": "Combine prompt display, line reading, and exit handling into a working interactive loop.",
+      "integrated_behavior_ids": null,
+      "contract": {
+        "scenario": "",
+        "steps": null
+      },
+      "harness": {
+        "language": "",
+        "test_code": "",
+        "expected_output": ""
+      },
+      "concept_mcqs": null
+    }
+  },
+  {
+    "id": "command-parsing",
+    "order": 2,
+    "title": "Command Parsing and Tokenization",
+    "goal": "Break the raw user input string into executable command names and distinct argument tokens.",
+    "required_capabilities": [
+      {
+        "id": "tokenize-input-string",
+        "description": "Split a raw input string into whitespace-separated argument tokens."
+      },
+      {
+        "id": "handle-quoted-arguments",
+        "description": "Support quoted strings as single arguments containing whitespace."
+      }
+    ],
+    "level_ids": [
+      "level-tokenize-input-string",
+      "level-5-command-parsing"
+    ],
+    "boss_fight": {
+      "title": "Advanced Command Line Parser",
+      "public_preview": "Test your ability to parse complex command lines containing both normal whitespace-separated tokens and quoted arguments with internal spaces.",
+      "integrated_behavior_ids": null,
+      "contract": {
+        "scenario": "",
+        "steps": null
+      },
+      "harness": {
+        "language": "",
+        "test_code": "",
+        "expected_output": ""
+      },
+      "concept_mcqs": null
+    }
+  },
+  {
+    "id": "process-execution",
+    "order": 3,
+    "title": "Process Execution",
+    "goal": "Execute external programs by spawning child processes and waiting for their completion.",
+    "required_capabilities": [
+      {
+        "id": "spawn-child-process",
+        "description": "Execute external commands using system binaries and passed arguments."
+      },
+      {
+        "id": "wait-for-process-completion",
+        "description": "Block the shell until the spawned child process finishes execution."
+      },
+      {
+        "id": "handle-execution-errors",
+        "description": "Gracefully handle command-not-found and execution failures without crashing."
+      }
+    ],
+    "level_ids": [
+      "level-6-process-execution",
+      "level-wait-for-process-completion",
+      "level-8"
+    ],
+    "boss_fight": {
+      "title": "Command Runner Integration",
+      "public_preview": "Combine child process spawning, completion waiting, and error handling into a unified command execution flow.",
+      "integrated_behavior_ids": null,
+      "contract": {
+        "scenario": "",
+        "steps": null
+      },
+      "harness": {
+        "language": "",
+        "test_code": "",
+        "expected_output": ""
+      },
+      "concept_mcqs": null
+    }
+  },
+  {
+    "id": "built-in-commands",
+    "order": 4,
+    "title": "Built-in Shell Commands",
+    "goal": "Implement internal shell commands that alter the shell state directly rather than launching external processes.",
+    "required_capabilities": [
+      {
+        "id": "implement-cd-command",
+        "description": "Change the current working directory of the shell process."
+      },
+      {
+        "id": "dispatch-builtins",
+        "description": "Route recognized command names to built-in handlers instead of execution."
+      }
+    ],
+    "level_ids": [
+      "level-implement-cd-command",
+      "level-10-built-in-commands"
+    ],
+    "boss_fight": {
+      "title": "Shell Built-ins Integration",
+      "public_preview": "Test routing built-in commands and changing the current working directory.",
+      "integrated_behavior_ids": null,
+      "contract": {
+        "scenario": "",
+        "steps": null
+      },
+      "harness": {
+        "language": "",
+        "test_code": "",
+        "expected_output": ""
+      },
+      "concept_mcqs": null
+    }
+  },
+  {
+    "id": "input-output-redirection",
+    "order": 5,
+    "title": "Input and Output Redirection",
+    "goal": "Support redirecting command standard input and standard output streams to files.",
+    "required_capabilities": [
+      {
+        "id": "parse-redirection-operators",
+        "description": "Detect redirection symbols like output redirection and file targets from tokens."
+      },
+      {
+        "id": "apply-file-redirection",
+        "description": "Configure standard streams to read from or write to specified files before execution."
+      }
+    ],
+    "level_ids": [
+      "level-11-parse-redirection-operators",
+      "level-12-input-output-redirection"
+    ],
+    "boss_fight": {
+      "title": "Redirecting Shell Streams",
+      "public_preview": "Combine parsing of redirection operators with configuring file streams to execute commands with redirected input and output.",
+      "integrated_behavior_ids": null,
+      "contract": {
+        "scenario": "",
+        "steps": null
+      },
+      "harness": {
+        "language": "",
+        "test_code": "",
+        "expected_output": ""
+      },
+      "concept_mcqs": null
+    }
+  }
+]

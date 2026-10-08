@@ -1,0 +1,71 @@
+{
+  "milestone_id": "built-in-commands",
+  "questions": [
+    {
+      "id": "q-1",
+      "level_id": "level-implement-cd-command",
+      "question": "Why must the 'cd' command be implemented as a built-in shell command rather than an external executable process in this language?",
+      "options": [
+        "External binaries cannot execute file path operations.",
+        "Go's os/exec package explicitly forbids changing directories.",
+        "An external process changes only its own working directory, not the parent shell's process state.",
+        "Built-in commands execute faster because they skip disk reads."
+      ],
+      "placement": {
+        "capability_ids": [
+          "implement-cd-command",
+          "dispatch-builtins"
+        ],
+        "behavior_ids": [
+          "implement-cd-command"
+        ],
+        "introduced_at_level_id": "level-implement-cd-command",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "id": "q-2",
+      "level_id": "level-10-built-in-commands",
+      "question": "When implementing a built-in command dispatcher in a Go shell, what is the most robust way to check if a parsed command string is a built-in?",
+      "options": [
+        "A long chain of nested if/else statements comparing string lengths.",
+        "A lookup map mapping command strings to handler function pointers.",
+        "Reflection on the main package scope to find matching function names.",
+        "Sending an IPC signal to check command existence."
+      ],
+      "placement": {
+        "capability_ids": [
+          "implement-cd-command",
+          "dispatch-builtins"
+        ],
+        "behavior_ids": [
+          "dispatch-builtins"
+        ],
+        "introduced_at_level_id": "level-10-built-in-commands",
+        "difficulty": "medium"
+      }
+    },
+    {
+      "id": "q-03",
+      "level_id": "level-implement-cd-command",
+      "question": "How should a shell built-in command handler handle execution errors, such as a non-existent directory passed to 'cd'?",
+      "options": [
+        "Return the error gracefully to the shell loop so it can print a message and keep running.",
+        "Panic immediately to trigger the global crash recovery handler.",
+        "Exit the shell process entirely with status code 1.",
+        "Ignore the error and remain in the current working directory."
+      ],
+      "placement": {
+        "capability_ids": [
+          "implement-cd-command",
+          "dispatch-builtins"
+        ],
+        "behavior_ids": [
+          "implement-cd-command"
+        ],
+        "introduced_at_level_id": "level-implement-cd-command",
+        "difficulty": "easy"
+      }
+    }
+  ]
+}

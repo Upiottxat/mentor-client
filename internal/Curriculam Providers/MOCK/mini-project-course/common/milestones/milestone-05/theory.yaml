@@ -1,0 +1,20 @@
+milestone_id: input-output-redirection
+sections:
+    - id: sec-parse-operators
+      title: Parse Redirection Operators
+      content: |-
+        When a command string is typed into the shell, it arrives as a continuous stream of text that must be tokenized into discrete arguments. Certain tokens carry special meaning: symbols like the greater-than sign indicate output redirection, while the less-than sign indicates input redirection. Parsing redirection operators involves scanning the tokenized argument list to identify these special symbols and extracting the target filename that immediately follows them.
+
+        Think of this phase as a postal sorting facility inspecting address labels. The sorter separates regular cargo from routing instructions. When a redirection operator is encountered, it and its target file are separated from the main command arguments so that the execution engine does not accidentally pass the redirection symbols as regular command-line flags to the underlying program. Building a robust parser ensures that operators are correctly identified, edge cases like missing target files are caught early, and the remaining command arguments stay pristine for execution.
+      introduced_at_level_id: level-11-parse-redirection-operators
+      used_by_levels: []
+      is_shared: false
+    - id: sec-apply-redirection
+      title: Apply File Redirection
+      content: |-
+        Once redirection operators and their target files are successfully identified, the shell must configure the standard input and output streams before executing the target program. Operating systems represent open files and communication channels as integer descriptors, with standard input, standard output, and standard error occupying well-known initial slots. Applying redirection involves opening the specified file on disk and swapping the standard stream descriptors to point to the new file resource.
+
+        Imagine redirecting an actor's microphone feed during a live stage play. Before the scene begins, the sound engineer reroutes the input source or the speaker output behind the scenes without the audience needing to change how they listen. In the same way, the process itself remains completely unaware that its output is flowing into a file rather than the terminal screen, because the operating system kernel handles the underlying descriptor redirection transparently at the process startup boundary.
+      introduced_at_level_id: level-12-input-output-redirection
+      used_by_levels: []
+      is_shared: false

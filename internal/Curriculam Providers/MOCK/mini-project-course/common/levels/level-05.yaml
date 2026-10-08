@@ -1,0 +1,228 @@
+id: level-5-command-parsing
+order: 5
+milestone_id: command-parsing
+title: Handle Quoted Arguments
+goal: Support quoted strings as single arguments containing whitespace.
+narrative:
+    hook: Your shell successfully breaks input strings apart by whitespace, but it treats spaces inside file names or messages as hard boundaries.
+    motivation: Without recognizing quotes, users cannot pass paths or messages containing spaces, limiting the utility of commands.
+    concrete_demo: When a user provides a phrase enclosed in matching quote characters, the system groups those words together into a single parameter instead of fracturing them into multiple distinct tokens.
+difficulty: medium
+status: development
+learning_objectives:
+    - Recognize single and double quotes during tokenization
+    - Group whitespace-separated terms enclosed in quotes into a single argument
+    - Strip surrounding quote characters from final argument tokens
+constraints:
+    - Do not split tokens by spaces if they occur inside matching quotes
+    - Ensure unquoted arguments continue to split normally by whitespace
+    - Maintain the exact order of resulting arguments
+deliverables:
+    - An updated tokenization routine capable of handling quoted substrings
+    - Unit tests verifying single, double, and mixed quote scenarios
+behaviors:
+    - id: handle-quoted-arguments
+      description: The system correctly parses quoted substrings containing spaces as single distinct arguments while stripping the surrounding quote markers.
+tests:
+    - id: test-handle-quotes-normal-single
+      behavior_ids:
+        - handle-quoted-arguments
+      category: unit
+      case_type: normal
+      kind: predefined
+      run_on: test_and_submit
+      description: Verifies that single quotes group words with spaces into a single token.
+      expected_behavior: The input string containing single-quoted sections produces a unified argument without outer quotes.
+      io:
+        stdin: |
+            arg1 'hello world' arg3
+        expected: |
+            arg1
+            hello world
+            arg3
+        matcher: exact
+    - id: test-handle-quotes-normal-double
+      behavior_ids:
+        - handle-quoted-arguments
+      category: unit
+      case_type: normal
+      kind: predefined
+      run_on: test_and_submit
+      description: Verifies that double quotes group words with spaces into a single token.
+      expected_behavior: The input string containing double-quoted sections produces a unified argument without outer quotes.
+      io:
+        stdin: |
+            cmd "file name with spaces.txt"
+        expected: |
+            cmd
+            file name with spaces.txt
+        matcher: exact
+    - id: test-handle-quotes-edge-empty
+      behavior_ids:
+        - handle-quoted-arguments
+      category: unit
+      case_type: edge
+      kind: predefined
+      run_on: test_and_submit
+      description: Verifies handling of empty quoted strings within the input stream.
+      expected_behavior: Empty quotes result in an empty argument token rather than disappearing entirely.
+      io:
+        stdin: |
+            arg1 "" arg3
+        expected: |
+            arg1
+
+            arg3
+        matcher: exact
+    - id: test-handle-quotes-dynamic-mixed
+      behavior_ids:
+        - handle-quoted-arguments
+      category: functional
+      case_type: normal
+      kind: dynamic_oracle
+      run_on: submit_only
+      description: Verifies correct behavior with a combination of unquoted, single-quoted, and double-quoted parameters.
+      expected_behavior: All argument boundaries are correctly identified regardless of quote types.
+      io:
+        stdin: |
+            echo hello 'wide world' "from program"
+        expected: |
+            echo
+            hello
+            wide world
+            from program
+        matcher: exact
+unlock_policy:
+    require_all_current_tests: true
+    require_all_previous_tests: true
+    allow_level_skipping: false
+agnostic_test_spec:
+    level_id: level-5-command-parsing
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-handle-quotes-normal-single
+          description: Verifies that single quotes group words with spaces into a single token.
+          expected_behavior: The input string containing single-quoted sections produces a unified argument without outer quotes.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            arg1 'hello world' arg3
+          expected: |
+            arg1
+            hello world
+            arg3
+          matcher: exact
+        - name: test-handle-quotes-normal-double
+          description: Verifies that double quotes group words with spaces into a single token.
+          expected_behavior: The input string containing double-quoted sections produces a unified argument without outer quotes.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            cmd "file name with spaces.txt"
+          expected: |
+            cmd
+            file name with spaces.txt
+          matcher: exact
+        - name: test-handle-quotes-edge-empty
+          description: Verifies handling of empty quoted strings within the input stream.
+          expected_behavior: Empty quotes result in an empty argument token rather than disappearing entirely.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            arg1 "" arg3
+          expected: |
+            arg1
+
+            arg3
+          matcher: exact
+        - name: test-handle-quotes-dynamic-mixed
+          description: Verifies correct behavior with a combination of unquoted, single-quoted, and double-quoted parameters.
+          expected_behavior: All argument boundaries are correctly identified regardless of quote types.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: |
+            echo hello 'wide world' "from program"
+          expected: |
+            echo
+            hello
+            wide world
+            from program
+          matcher: exact
+    test_ids:
+        - test-handle-quotes-normal-single
+        - test-handle-quotes-normal-double
+        - test-handle-quotes-edge-empty
+        - test-handle-quotes-dynamic-mixed
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"strings"
+            )
+
+            func parseArgs(input string) []string {
+            	var args []string
+            	var current strings.Builder
+            	inQuote := false
+            	var quoteChar rune
+            	
+            	runnes := []rune(input)
+            	for i := 0; i < len(runnes); i++ {
+            		r := runnes[i]
+            		if inQuote {
+            			if r == quoteChar {
+            				inQuote = false
+            			} else {
+            				current.WriteRune(r)
+            			}
+            		} else {
+            			if r == '\'' || r == '"' {
+            				inQuote = true
+            				quoteChar = r
+            			} else if r == ' ' || r == '\t' || r == '\r' || r == '\n' {
+            				if current.Len() > 0 {
+            					args = append(args, current.String())
+            					current.Reset()
+            				}
+            			} else {
+            				current.WriteRune(r)
+            			}
+            		}
+            	}
+            	if current.Len() > 0 || inQuote {
+            		args = append(args, current.String())
+            	}
+            	return args
+            }
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	for {
+            		line, err := reader.ReadString('\n')
+            		if len(line) == 0 && err != nil {
+            			break
+            		}
+            		line = strings.TrimSuffix(line, "\n")
+            		line = strings.TrimSuffix(line, "\r")
+            		if line == "" && err != nil {
+            			break
+            		}
+            		
+            		args := parseArgs(line)
+            		for _, arg := range args {
+            			fmt.Println(arg)
+            		}
+            		if err != nil {
+            			break
+            		}
+            	}
+            }
+verified: false

@@ -1,0 +1,177 @@
+id: level-implement-cd-command
+order: 9
+milestone_id: built-in-commands
+title: Implement CD Command
+goal: Change the current working directory of premium shell process directly.
+narrative:
+    hook: Your shell can execute external programs and wait for them to finish, but every command runs inside its own isolated child process.
+    motivation: If you try to change directories using an external program, only that temporary child process updates its location while your main shell stays completely stationary.
+    concrete_demo: Typing a directory-navigation instruction needs to update the active environment of your main process so that subsequent inputs execute inside the newly selected folder.
+difficulty: easy
+status: development
+learning_objectives:
+    - Understand how a process maintains its working directory as part of its execution state.
+    - Recognize why directory-changing instructions must be handled internally instead of spawning external binaries.
+    - Learn how to invoke the system facility that updates the current working directory.
+constraints:
+    - Must not spawn an external child process for the directory change instruction.
+    - Must modify the execution state of the current shell process directly.
+    - Must handle standard path arguments correctly.
+deliverables:
+    - An internal directory-updating routine that modifies the current working directory state.
+behaviors:
+    - id: implement-cd-command
+      description: The shell intercepts directory-change instructions and updates its working directory state directly.
+tests:
+    - id: test-implement-cd-normal
+      behavior_ids:
+        - implement-cd-command
+      category: functional
+      case_type: normal
+      kind: predefined
+      run_on: test_and_submit
+      description: Verifies that supplying a valid target path updates the working directory successfully.
+      expected_behavior: The directory updates correctly without spawning external tools.
+      io:
+        args:
+            - cd
+            - /tmp
+        expected: ""
+        matcher: exact
+    - id: test-implement-cd-edge
+      behavior_ids:
+        - implement-cd-command
+      category: functional
+      case_type: edge
+      kind: predefined
+      run_on: test_and_submit
+      description: Verifies behavior when supplying an invalid or nonexistent target path.
+      expected_behavior: The directory remains unchanged and an error indicator is reported.
+      io:
+        args:
+            - cd
+            - /nonexistent-directory-xyz
+        expected: error
+        matcher: trim
+    - id: test-implement-cd-oracle
+      behavior_ids:
+        - implement-cd-command
+      category: integration
+      case_type: normal
+      kind: dynamic_oracle
+      run_on: submit_only
+      description: Dynamic verification of directory navigation across multiple sequential steps.
+      expected_behavior: Sequential path changes update state accurately.
+      io:
+        args:
+            - cd
+            - .
+        expected: ""
+        matcher: exact
+unlock_policy:
+    require_all_current_tests: true
+    require_all_previous_tests: true
+    allow_level_skipping: false
+agnostic_test_spec:
+    level_id: level-implement-cd-command
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-implement-cd-normal
+          description: Verifies that supplying a valid target path updates the working directory successfully.
+          expected_behavior: The directory updates correctly without spawning external tools.
+          kind: predefined
+          run_on: test_and_submit
+          args:
+            - cd
+            - /tmp
+          expected: ""
+          matcher: exact
+        - name: test-implement-cd-edge
+          description: Verifies behavior when supplying an invalid or nonexistent target path.
+          expected_behavior: The directory remains unchanged and an error indicator is reported.
+          kind: predefined
+          run_on: test_and_submit
+          args:
+            - cd
+            - /nonexistent-directory-xyz
+          expected: error
+          matcher: trim
+        - name: test-implement-cd-oracle
+          description: Dynamic verification of directory navigation across multiple sequential steps.
+          expected_behavior: Sequential path changes update state accurately.
+          kind: dynamic_oracle
+          run_on: submit_only
+          args:
+            - cd
+            - .
+          expected: ""
+          matcher: exact
+    test_ids:
+        - test-implement-cd-normal
+        - test-implement-cd-edge
+        - test-implement-cd-oracle
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"path/filepath"
+            	"strings"
+            )
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	for {
+            		fmt.Print("$ ")
+            		line, err := reader.ReadString('\n')
+            		if err != nil {
+            			break
+            		}
+            		line = strings.TrimSpace(line)
+            		if line == "" {
+            			continue
+            		}
+
+            		args := strings.Fields(line)
+            		cmd := args[0]
+
+            		switch cmd {
+            		case "exit":
+            			return
+            		case "cd":
+            			var targetDir string
+            			if len(args) < 2 {
+            				home, err := os.UserHomeDir()
+            				if err != nil {
+            					fmt.Fprintln(os.Stderr, "error")
+            					continue
+            				}
+            				targetDir = home
+            			} else {
+            				targetDir = args[1]
+            			}
+
+            			err := os.Chdir(targetDir)
+            			if err != nil {
+            				fmt.Fprintln(os.Stderr, "error")
+            			}
+            		case "pwd":
+            			dir, err := os.Getwd()
+            			if err != nil {
+            				fmt.Fprintln(os.Stderr, "error")
+            			} else {
+            				fmt.Println(dir)
+            			}
+            		default:
+            			fmt.Printf("%s: command not found\n", cmd)
+            		}
+            	}
+            }
+verified: false

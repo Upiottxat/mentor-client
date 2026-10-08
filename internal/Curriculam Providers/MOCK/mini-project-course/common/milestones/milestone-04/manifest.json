@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "milestone_id": "built-in-commands",
+  "order": 4,
+  "artifacts": {
+    "overview": "overview.json",
+    "theory": "theory.json",
+    "questions": "questions.json",
+    "challenges": "challenges.json",
+    "diagrams": "diagrams.json",
+    "interactives": "interactives.json"
+  },
+  "language_artifacts": {
+    "go": {
+      "reference": "reference.json",
+      "examples": "examples.json",
+      "interactives": "interactives.json"
+    }
+  },
+  "server_artifacts": {
+    "solutions": "document-solutions.json",
+    "bossfight_contract": "milestone-04.bossfight.json"
+  },
+  "learning_path": [
+    {
+      "level_id": "level-implement-cd-command",
+      "unlocks": {
+        "theory": [
+          "sec-cd-command"
+        ],
+        "questions": [
+          "q-1",
+          "q-03"
+        ],
+        "challenges": [
+          "ch-cd-impl"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    },
+    {
+      "level_id": "level-10-built-in-commands",
+      "unlocks": {
+        "theory": [
+          "sec-dispatch"
+        ],
+        "questions": [
+          "q-2"
+        ],
+        "challenges": [
+          "ch-dispatch"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    }
+  ]
+}

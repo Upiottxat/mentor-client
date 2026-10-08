@@ -1,0 +1,15 @@
+{
+  "milestone_id": "command-parsing",
+  "order": 2,
+  "core_concept": "Command parsing transforms a continuous raw input string into discrete token structures by applying delimiter rules and stateful quote handling.",
+  "overview": "When users interact with a command-line interface, they type a continuous stream of characters into the terminal. However, the operating system and underlying execution engines cannot understand a raw string as a single unit of work; they require an executable command name followed by a distinct collection of arguments. Bridging this gap requires breaking apart the raw input into meaningful chunks.\n\nIn this milestone, you will design the parsing engine that acts as a translator between human typing and structured execution. By mastering whitespace separation and stateful quote parsing, you ensure that complex inputs containing spaces or special characters are accurately interpreted without losing their intended boundaries.",
+  "recap": {
+    "summary": "Completed milestone 2 (Command Parsing and Tokenization), establishing core understanding of Command parsing transforms a continuous raw input string into discrete token structures by applying delimiter rules and stateful quote handling..",
+    "key_takeaways": [
+      "Command parsing transforms a continuous raw input string into discrete token structures by applying delimiter rules and stateful quote handling."
+    ],
+    "integration_readiness": [
+      "Ready for downstream milestones and integration challenges."
+    ]
+  }
+}

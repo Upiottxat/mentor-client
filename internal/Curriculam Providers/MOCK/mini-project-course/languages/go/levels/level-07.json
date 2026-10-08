@@ -1,0 +1,42 @@
+{
+  "level_id": "level-wait-for-process-completion",
+  "order": 7,
+  "milestone_id": "process-execution",
+  "language": "go",
+  "build": {
+    "required": true
+  },
+  "implementation_guidance": [
+    "After spawning the child process handle, invoke the runtime wait operation on that handle.",
+    "Capture any returned exit status or error indicators to ensure the child process finished cleanly."
+  ],
+  "hints": [
+    {
+      "id": "hint-wait-for-process-completion-1",
+      "order": 1,
+      "type": "conceptual",
+      "content": "When a parent process spawns a child, the operating system keeps track of the child's lifecycle. The parent must explicitly request to block execution until the child's state changes to terminated.",
+      "behavior_id": "wait-for-process-completion",
+      "reveal_after_attempts": 2,
+      "spoiler_risk": false
+    },
+    {
+      "id": "hint-wait-for-process-completion-2",
+      "order": 2,
+      "type": "directional",
+      "content": "Look for the method or function associated with the process handle that blocks until the underlying operating system process finishes execution.",
+      "behavior_id": "wait-for-process-completion",
+      "reveal_after_attempts": 4,
+      "spoiler_risk": false
+    },
+    {
+      "id": "hint-wait-for-process-completion-3",
+      "order": 3,
+      "type": "structural",
+      "content": "Invoke the blocking call immediately after starting the command structure, checking its return values to ensure the command finished successfully.",
+      "behavior_id": "wait-for-process-completion",
+      "reveal_after_attempts": 6,
+      "spoiler_risk": false
+    }
+  ]
+}

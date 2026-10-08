@@ -1,0 +1,51 @@
+{
+  "level_id": "display-shell-prompt-level",
+  "order": 1,
+  "agnostic_test_spec": {
+    "level_id": "display-shell-prompt-level",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-prompt-normal-output",
+        "description": "Verify that the standard output contains the expected prompt string.",
+        "expected_behavior": "The shell writes the prompt string to standard output upon startup.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "expected": "$ ",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-prompt-functional-check",
+        "description": "Verify the prompt appears correctly in a standard invocation scenario.",
+        "expected_behavior": "The correct prompt indicator is rendered without errors.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "expected": "$ ",
+        "matcher": "trim"
+      },
+      {
+        "name": "test-prompt-edge-empty-environment",
+        "description": "Verify prompt rendering under minimal execution parameters.",
+        "expected_behavior": "The shell successfully displays the prompt even with an empty environment.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "expected": "$ ",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-prompt-normal-output",
+      "test-prompt-functional-check",
+      "test-prompt-edge-empty-environment"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Print(\"$ \")\n}"
+    }
+  }
+}

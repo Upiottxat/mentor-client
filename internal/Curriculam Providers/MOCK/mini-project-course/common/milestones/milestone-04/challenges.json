@@ -1,0 +1,49 @@
+{
+  "milestone_id": "built-in-commands",
+  "challenges": [
+    {
+      "id": "ch-cd-impl",
+      "level_id": "level-implement-cd-command",
+      "title": "Implement Directory Changer",
+      "description": "The shell needs a functional 'cd' command to alter the working directory of the running process.",
+      "task": "Write a Function that takes a slice of arguments and alters the process's working directory using standard library path utilities. Return any encountered error.",
+      "hints": [
+        "Consider what happens when zero arguments are passed.",
+        "Look into standard library functions for updating the working directory."
+      ],
+      "placement": {
+        "capability_ids": [
+          "implement-cd-command",
+          "dispatch-builtins"
+        ],
+        "behavior_ids": [
+          "implement-cd-command"
+        ],
+        "introduced_at_level_id": "level-implement-cd-command",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "id": "ch-dispatch",
+      "level_id": "level-10-built-in-commands",
+      "title": "Command Dispatcher Routing",
+      "description": "The shell requires a clean dispatcher to separate built-in commands from external binary execution.",
+      "task": "Create a function signature that checks a lookup collection for a given command name, invoking it if present and reporting whether a built-in was matched and executed.",
+      "hints": [
+        "Use a mapping structure from strings to executable handlers.",
+        "Return a boolean indicator along with any execution error."
+      ],
+      "placement": {
+        "capability_ids": [
+          "implement-cd-command",
+          "dispatch-builtins"
+        ],
+        "behavior_ids": [
+          "dispatch-builtins"
+        ],
+        "introduced_at_level_id": "level-10-built-in-commands",
+        "difficulty": "medium"
+      }
+    }
+  ]
+}

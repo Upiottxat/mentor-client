@@ -1,0 +1,16 @@
+milestone_id: ""
+order: 0
+title: Redirecting Shell Streams
+harness:
+    language: go
+    test_code: |-
+        package main
+        import (
+        	"bytes"
+        	"testing"
+        )
+        func TestShellRedirection(t *testing.T) {
+        	var stdout bytes.Buffer
+        	_ = stdout
+        }
+    expected_output: hello

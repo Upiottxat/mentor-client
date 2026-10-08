@@ -1,0 +1,24 @@
+milestone_id: built-in-commands
+questions:
+    - question_id: q-1
+      level_id: level-implement-cd-command
+      answer_index: 2
+      explanation: External process isolation requires built-ins for state mutations.
+    - question_id: q-2
+      level_id: level-10-built-in-commands
+      answer_index: 1
+      explanation: Map lookups provide clean O(1) routing.
+    - question_id: q-03
+      level_id: level-implement-cd-command
+      answer_index: 0
+      explanation: Graceful error returns prevent shell termination.
+challenges:
+    - challenge_id: ch-cd-impl
+      level_id: level-implement-cd-command
+      title: Implement Directory Changer
+      solution: func ChangeDirectory(args []string) error { var target string if len(args) < 1 { home, err := os.UserHomeDir(); if err != nil { return err }; target = home } else { target = args[0] }; return os.Chdir(target) }
+    - challenge_id: ch-dispatch
+      level_id: level-10-built-in-commands
+      title: Command Dispatcher Routing
+      solution: 'var builtins = map[string]func([]string) error{"cd": ChangeDirectory}; func ExecuteBuiltin(name string, args []string) (bool, error) { if fn, ok := builtins[name]; ok { return true, fn(args) }; return false, nil }'
+interactive_challenges: []

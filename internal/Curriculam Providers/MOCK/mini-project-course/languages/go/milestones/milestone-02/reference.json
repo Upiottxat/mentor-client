@@ -1,0 +1,38 @@
+{
+  "milestone_id": "command-parsing",
+  "language": "go",
+  "sections": [
+    {
+      "common_section_id": "sec-tokenize",
+      "syntax_topics": [
+        "strings.Fields",
+        "strings.Builder",
+        "bufio.Scanner"
+      ],
+      "examples": [
+        {
+          "theory_section_id": "sec-tokenize",
+          "title": "Splitting by Whitespace",
+          "code": "import (\n    \"fmt\"\n    \"strings\"\n)\n\nfunc main() {\n    input := \"echo hello world\"\n    tokens := strings.Fields(input)\n    fmt.Printf(\"%q\\n\", tokens)\n}",
+          "explanation": "strings.Fields splits a string around each instance of one or more consecutive white space characters."
+        }
+      ]
+    },
+    {
+      "common_section_id": "sec-quotes",
+      "syntax_topics": [
+        "Custom State Machine Parsing",
+        "Iterating over runes",
+        "Conditional State Tracking"
+      ],
+      "examples": [
+        {
+          "theory_section_id": "sec-quotes",
+          "title": "Stateful Quote Parsing",
+          "code": "import (\n    \"fmt\"\n    \"strings\"\n)\n\nfunc parseTokens(input string) []string {\n    var tokens []string\n    var current strings.Builder\n    inQuotes := false\n\n    for _, r := range input {\n        if r == '\"' {\n            inQuotes = !inQuotes\n            continue\n        }\n        if r == ' ' \u0026\u0026 !inQuotes {\n            if current.Len() \u003e 0 {\n                tokens = append(tokens, current.String())\n                current.Reset()\n            }\n        } else {\n            current.WriteRune(r)\n        }\n    }\n    if current.Len() \u003e 0 {\n        tokens = append(tokens, current.String())\n    }\n    return tokens\n}",
+          "explanation": "Iterating over runes allows tracking quote states to preserve spaces within quoted arguments."
+        }
+      ]
+    }
+  ]
+}

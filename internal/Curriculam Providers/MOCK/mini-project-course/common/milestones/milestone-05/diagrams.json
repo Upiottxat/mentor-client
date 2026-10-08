@@ -1,0 +1,11 @@
+{
+  "milestone_id": "input-output-redirection",
+  "diagrams": [
+    {
+      "id": "diag-redirection-flow",
+      "title": "Redirection Parsing and Execution Workflow",
+      "format": "mermaid",
+      "content": "graph TD;\n    A[Tokenized Command] --\u003e B{Contains Redirection?};\n    B -- Yes --\u003e C[Extract Operator and Target File];\n    B -- No --\u003e D[Execute Standard Command];\n    C --\u003e E[Configure File Descriptors];\n    E --\u003e F[Execute Command with Redirected Streams];"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "milestone_id": "repl-loop",
+  "order": 1,
+  "core_concept": "The Read-Eval-Print Loop establishes an interactive command-line interface by continuously displaying a prompt, reading user input, and gracefully handling termination.",
+  "overview": "When you open a terminal, you are interacting with one of the oldest and most powerful user interfaces in computer science: the shell. At its heart, a shell is simply a program waiting patiently for your instructions, executing them, and showing you the results. This continuous interaction relies on a foundational software pattern known as the Read-Eval-Print Loop, or REPL.\n\nBuilding your own shell from scratch allows you to look behind the curtain of operating system interactions. Instead of relying on abstract graphical environments, you will learn how text flows from standard input, how programs process lines of commands, and how control flow manages application lifecycles. By breaking down the shell into manageable steps—starting with a simple prompt, moving to reading input, and concluding with a clean exit mechanism—you will master the core mechanics that power every modern command-line environment.",
+  "recap": {
+    "summary": "Completed milestone 1 (Read-Eval-Print Loop), establishing core understanding of The Read-Eval-Print Loop establishes an interactive command-line interface by continuously displaying a prompt, reading user input, and gracefully handling termination..",
+    "key_takeaways": [
+      "The Read-Eval-Print Loop establishes an interactive command-line interface by continuously displaying a prompt, reading user input, and gracefully handling termination."
+    ],
+    "integration_readiness": [
+      "Ready for downstream milestones and integration challenges."
+    ]
+  }
+}

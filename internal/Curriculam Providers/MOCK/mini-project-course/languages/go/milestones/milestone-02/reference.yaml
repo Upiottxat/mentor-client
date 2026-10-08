@@ -1,0 +1,62 @@
+milestone_id: command-parsing
+language: go
+sections:
+    - common_section_id: sec-tokenize
+      syntax_topics:
+        - strings.Fields
+        - strings.Builder
+        - bufio.Scanner
+      examples:
+        - theory_section_id: sec-tokenize
+          title: Splitting by Whitespace
+          code: |-
+            import (
+                "fmt"
+                "strings"
+            )
+
+            func main() {
+                input := "echo hello world"
+                tokens := strings.Fields(input)
+                fmt.Printf("%q\n", tokens)
+            }
+          explanation: strings.Fields splits a string around each instance of one or more consecutive white space characters.
+    - common_section_id: sec-quotes
+      syntax_topics:
+        - Custom State Machine Parsing
+        - Iterating over runes
+        - Conditional State Tracking
+      examples:
+        - theory_section_id: sec-quotes
+          title: Stateful Quote Parsing
+          code: |-
+            import (
+                "fmt"
+                "strings"
+            )
+
+            func parseTokens(input string) []string {
+                var tokens []string
+                var current strings.Builder
+                inQuotes := false
+
+                for _, r := range input {
+                    if r == '"' {
+                        inQuotes = !inQuotes
+                        continue
+                    }
+                    if r == ' ' && !inQuotes {
+                        if current.Len() > 0 {
+                            tokens = append(tokens, current.String())
+                            current.Reset()
+                        }
+                    } else {
+                        current.WriteRune(r)
+                    }
+                }
+                if current.Len() > 0 {
+                    tokens = append(tokens, current.String())
+                }
+                return tokens
+            }
+          explanation: Iterating over runes allows tracking quote states to preserve spaces within quoted arguments.

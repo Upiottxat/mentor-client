@@ -1,0 +1,24 @@
+level_id: level-tokenize-input-string
+order: 4
+milestone_id: command-parsing
+language: go
+build:
+    required: true
+implementation_guidance:
+    - Examine standard string manipulation utilities available in the standard library for splitting text.
+    - Consider how whitespace characters dictate the boundaries between individual argument tokens.
+hints:
+    - id: hint-tokenize-input-string-1
+      order: 1
+      type: conceptual
+      content: Think about how sentences are read word by word. When scanning text, you look for spaces or tabs that act as natural separators between individual words, allowing you to collect each word into a separate bucket.
+      behavior_id: tokenize-input-string
+      reveal_after_attempts: 2
+      spoiler_risk: false
+    - id: hint-tokenize-input-string-2
+      order: 2
+      type: directional
+      content: Look for built-in string manipulation functions in your target language's standard library that specialize in cutting a continuous text string into slices based on whitespace patterns.
+      behavior_id: tokenize-input-string
+      reveal_after_attempts: 4
+      spoiler_risk: false

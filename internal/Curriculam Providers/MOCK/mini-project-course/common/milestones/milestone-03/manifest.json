@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "milestone_id": "process-execution",
+  "order": 3,
+  "artifacts": {
+    "overview": "overview.json",
+    "theory": "theory.json",
+    "questions": "questions.json",
+    "challenges": "challenges.json",
+    "diagrams": "diagrams.json",
+    "interactives": "interactives.json"
+  },
+  "language_artifacts": {
+    "go": {
+      "reference": "reference.json",
+      "examples": "examples.json",
+      "interactives": "interactives.json"
+    }
+  },
+  "server_artifacts": {
+    "solutions": "document-solutions.json",
+    "bossfight_contract": "milestone-03.bossfight.json"
+  },
+  "learning_path": [
+    {
+      "level_id": "level-6-process-execution",
+      "unlocks": {
+        "theory": [
+          "sec-spawn-child"
+        ],
+        "questions": [
+          "q-1"
+        ],
+        "challenges": [
+          "ch-spawn-command"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    },
+    {
+      "level_id": "level-wait-for-process-completion",
+      "unlocks": {
+        "theory": [
+          "sec-wait-completion"
+        ],
+        "questions": [
+          "q-2"
+        ],
+        "challenges": [
+          "ch-wait-process"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    },
+    {
+      "level_id": "level-8",
+      "unlocks": {
+        "theory": [
+          "sec-error-handling"
+        ],
+        "questions": [
+          "q-3"
+        ],
+        "challenges": [
+          "ch-handle-errors"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    }
+  ]
+}

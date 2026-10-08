@@ -1,0 +1,80 @@
+milestone_id: process-execution
+questions:
+    - question_id: q-1
+      level_id: level-6-process-execution
+      answer_index: 2
+      explanation: Passing command and arguments as separate parameters prevents shell injection vulnerabilities and ensures the execve system call correctly interprets the executable path and its argv array.
+    - question_id: q-2
+      level_id: level-wait-for-process-completion
+      answer_index: 1
+      explanation: Cmd.Run() starts the command and immediately blocks waiting for its completion (equivalent to Start() followed by Wait()). Cmd.Start() non-blockingly launches the process, returning control immediately.
+    - question_id: q-3
+      level_id: level-8
+      answer_index: 3
+      explanation: When a command is missing or execution fails, the shell should catch the specific error returned by the execution function (such as exec.ErrNotFound) and print a clean error message to standard error without crashing.
+challenges:
+    - challenge_id: ch-spawn-command
+      level_id: level-6-process-execution
+      title: Spawn and Execute External Command
+      solution: |-
+        package main
+
+        import (
+        	"os"
+        	"os/exec"
+        )
+
+        func executeCommand(name string, args []string) error {
+        	cmd := exec.Command(name, args...)
+        	cmd.Stdout = os.Stdout
+        	cmd.Stderr = os.Stderr
+        	return cmd.Run()
+        }
+    - challenge_id: ch-wait-process
+      level_id: level-wait-for-process-completion
+      title: Wait for Process Completion
+      solution: |-
+        package main
+
+        import (
+        	"os"
+        	"os/exec"
+        )
+
+        func runAndWait(name string, args []string) error {
+        	cmd := exec.Command(name, args...)
+        	cmd.Stdout = os.Stdout
+        	cmd.Stderr = os.Stderr
+        	err := cmd.Start()
+        	if err != nil {
+        		return err
+        	}
+        	return cmd.Wait()
+        }
+    - challenge_id: ch-handle-errors
+      level_id: level-8
+      title: Graceful Error Handling for Missing Binaries
+      solution: |-
+        package main
+
+        import (
+        	"errors"
+        	"fmt"
+        	"os"
+        	"os/exec"
+        )
+
+        func safeExecute(name string, args []string) {
+        	cmd := exec.Command(name, args...)
+        	cmd.Stdout = os.Stdout
+        	cmd.Stderr = os.Stderr
+        	err := cmd.Run()
+        	if err != nil {
+        		if errors.Is(err, exec.ErrNotFound) {
+        			fmt.Fprintf(os.Stderr, "shell: command not found: %s\n", name)
+        		} else {
+        			fmt.Fprintf(os.Stderr, "shell: error executing %s: %v\n", name, err)
+        		}
+        	}
+        }
+interactive_challenges: []

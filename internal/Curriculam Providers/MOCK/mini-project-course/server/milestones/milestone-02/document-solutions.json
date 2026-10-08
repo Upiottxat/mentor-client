@@ -1,0 +1,38 @@
+{
+  "milestone_id": "command-parsing",
+  "questions": [
+    {
+      "question_id": "q-1",
+      "level_id": "level-tokenize-input-string",
+      "answer_index": 1,
+      "explanation": "strings.Fields splits a string around each instance of one or more consecutive white space characters, handling multiple spaces gracefully, which is ideal for basic shell tokenization."
+    },
+    {
+      "question_id": "q-2",
+      "level_id": "level-5-command-parsing",
+      "answer_index": 2,
+      "explanation": "Quoted arguments require stateful scanning to treat whitespace characters inside the quotes as literal characters rather than argument delimiters, complicating a simple stateless split."
+    },
+    {
+      "question_id": "q-3",
+      "level_id": "level-tokenize-input-string",
+      "answer_index": 0,
+      "explanation": "Consecutive whitespace characters should be collapsed and ignored as delimiters, ensuring they do not produce empty string tokens unless specifically enclosed in quotes."
+    }
+  ],
+  "challenges": [
+    {
+      "challenge_id": "ch-tokenize-basic",
+      "level_id": "level-tokenize-input-string",
+      "title": "Basic Whitespace Tokenizer",
+      "solution": "package main\n\nimport (\n\t\"strings\"\n)\n\nfunc Tokenize(input string) []string {\n\treturn strings.Fields(input)\n}"
+    },
+    {
+      "challenge_id": "ch-parse-quotes",
+      "level_id": "level-5-command-parsing",
+      "title": "Stateful Quoted Argument Parser",
+      "solution": "package main\n\nimport (\n\t\"errors\"\n\t\"strings\"\n)\n\nfunc ParseWithQuotes(input string) ([]string, error) {\n\tvar tokens []string\n\tvar current strings.Builder\n\tinQuotes := false\n\n\tfor _, r := range input {\n\t\tswitch {\n\t\tcase r == '\"':\n\t\t\tinQuotes = !inQuotes\n\t\tcase r == ' ' \u0026\u0026 !inQuotes:\n\t\t\tif current.Len() \u003e 0 {\n\t\t\t\ttokens = append(tokens, current.String())\n\t\t\t\tcurrent.Reset()\n\t\t\t}\n\t\tdefault:\n\t\t\tcurrent.WriteRune(r)\n\t\t}\n\t}\n\n\tif inQuotes {\n\t\treturn nil, errors.New(\"unterminated quoted string\")\n\t}\n\n\tif current.Len() \u003e 0 {\n\t\ttokens = append(tokens, current.String())\n\t}\n\n\treturn tokens, nil\n}"
+    }
+  ],
+  "interactive_challenges": null
+}

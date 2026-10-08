@@ -1,0 +1,11 @@
+{
+  "milestone_id": "built-in-commands",
+  "diagrams": [
+    {
+      "id": "diag-dispatch",
+      "title": "Command Dispatch Workflow",
+      "format": "mermaid",
+      "content": "graph TD\nInput[User Input] --\u003e Parser[Command Parser]\nParser --\u003e Check{Is Built-in?}\nCheck --\u003e|Yes| Internal[Execute Internal Handler]\nCheck --\u003e|No| External[Spawn External Process]"
+    }
+  ]
+}

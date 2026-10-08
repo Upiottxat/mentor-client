@@ -1,0 +1,56 @@
+level_id: level-8
+order: 8
+agnostic_test_spec:
+    level_id: level-8
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-handle-errors-normal-1
+          description: Verify the shell reports an error and stays active when given a non-existent command.
+          expected_behavior: The shell should output an error message to standard error and continue running.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            nonexistentcommand12345
+            exit
+          expected: command not found
+          matcher: trim
+        - name: test-handle-errors-normal-2
+          description: Verify the shell can execute valid commands after encountering a failed command.
+          expected_behavior: Subsequent valid commands execute successfully after an error.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            badcommand
+            echo hello
+            exit
+          expected: hello
+          matcher: trim
+        - name: test-handle-errors-edge-1
+          description: Verify empty command inputs do not trigger fatal execution faults.
+          expected_behavior: The shell handles empty or whitespace-only execution requests safely.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: "   \nexit\n"
+          expected: ""
+          matcher: exact
+        - name: test-handle-errors-oracle-1
+          description: Verify random invalid inputs trigger resilient handling under dynamic evaluation.
+          expected_behavior: Arbitrary non-existent commands are caught and reported cleanly.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: |
+            randombadinputxyz
+            exit
+          expected: command not found
+          matcher: trim
+    test_ids:
+        - test-handle-errors-normal-1
+        - test-handle-errors-normal-2
+        - test-handle-errors-edge-1
+        - test-handle-errors-oracle-1
+reference_solution:
+    language: go
+    files:
+        main.go: "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\" \n\t\"os\"\n\t\"os/exec\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tfmt.Print(\"> \")\n\t\tline, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\n\t\tline = strings.TrimSpace(line)\n\t\tif line == \"\" {\n\t\t\tcontinue\n\t\t}\n\n\t\tif line == \"exit\" {\n\t\t\tbreak\n\t\t}\n\n\t\targs := strings.Fields(line)\n\t\tif len(args) == 0 {\n\t\t\tcontinue\n\t\t}\n\n\t\tcmd := exec.Command(args[0], args[1:]...)\n\t\tcmd.Stdout = os.Stdout\n\t\tcmd.Stderr = os.Stderr\n\n\t\terr = cmd.Run()\n\t\tif err != nil {\n\t\t\tfmt.Printf(\"%s: command not found\\n\", args[0])\n\t\t}\n\t}\n}"

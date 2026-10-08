@@ -1,0 +1,166 @@
+{
+  "id": "level-2-read-user-input",
+  "order": 2,
+  "milestone_id": "repl-loop",
+  "title": "Read User Input",
+  "goal": "Read standard input lines from the user interactively.",
+  "narrative": {
+    "hook": "Your interface can successfully display a prompt, but it currently lacks any mechanism to receive feedback or commands from the person sitting at the terminal.",
+    "motivation": "Without the ability to capture incoming text streams, any interactive program remains completely deaf to user intent, rendering dynamic operation impossible.",
+    "concrete_demo": "When an operator types a sequence of characters into the terminal window and presses enter, the application captures those exact keystrokes as a continuous data stream for processing."
+  },
+  "difficulty": "medium",
+  "status": "development",
+  "learning_objectives": [
+    "Capture raw text streams provided through standard input streams.",
+    "Process incoming text lines sequentially for further interpretation."
+  ],
+  "constraints": [
+    "Do not implement command execution or argument parsing in this level.",
+    "Operate strictly on standard input channels."
+  ],
+  "deliverables": [
+    "A routine capable of capturing a single line of text from standard input."
+  ],
+  "behaviors": [
+    {
+      "id": "read-user-input",
+      "description": "The system successfully reads standard input lines provided by the user."
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-read-input-normal-line",
+      "behavior_ids": [
+        "read-user-input"
+      ],
+      "category": "unit",
+      "case_type": "normal",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verify that standard input strings are captured correctly.",
+      "expected_behavior": "The input stream data is returned accurately without corruption.",
+      "io": {
+        "stdin": "hello world\n",
+        "expected": "hello world\n",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-read-input-functional-check",
+      "behavior_ids": [
+        "read-user-input"
+      ],
+      "category": "functional",
+      "case_type": "normal",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verify processing of multiple sequential input streams.",
+      "expected_behavior": "Sequential lines of input are read one after another.",
+      "io": {
+        "stdin": "first line\nsecond line\n",
+        "expected": "first line\nsecond line\n",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-read-input-edge-empty",
+      "behavior_ids": [
+        "read-user-input"
+      ],
+      "category": "unit",
+      "case_type": "edge",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verify behavior when receiving an immediate end of input signal.",
+      "expected_behavior": "The reader handles empty input streams gracefully.",
+      "io": {
+        "expected": "",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-read-input-dynamic-fuzz",
+      "behavior_ids": [
+        "read-user-input"
+      ],
+      "category": "functional",
+      "case_type": "normal",
+      "kind": "dynamic_oracle",
+      "run_on": "submit_only",
+      "description": "Verify resilience against varied whitespace patterns.",
+      "expected_behavior": "Arbitrary whitespace within lines is preserved during reading.",
+      "io": {
+        "stdin": "   spaces and tabs   \n",
+        "expected": "   spaces and tabs   \n",
+        "matcher": "exact"
+      }
+    }
+  ],
+  "unlock_policy": {
+    "require_all_current_tests": true,
+    "require_all_previous_tests": true,
+    "allow_level_skipping": false
+  },
+  "agnostic_test_spec": {
+    "level_id": "level-2-read-user-input",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-read-input-normal-line",
+        "description": "Verify that standard input strings are captured correctly.",
+        "expected_behavior": "The input stream data is returned accurately without corruption.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "hello world\n",
+        "expected": "hello world\n",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-read-input-functional-check",
+        "description": "Verify processing of multiple sequential input streams.",
+        "expected_behavior": "Sequential lines of input are read one after another.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "first line\nsecond line\n",
+        "expected": "first line\nsecond line\n",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-read-input-edge-empty",
+        "description": "Verify behavior when receiving an immediate end of input signal.",
+        "expected_behavior": "The reader handles empty input streams gracefully.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "expected": "",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-read-input-dynamic-fuzz",
+        "description": "Verify resilience against varied whitespace patterns.",
+        "expected_behavior": "Arbitrary whitespace within lines is preserved during reading.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "stdin": "   spaces and tabs   \n",
+        "expected": "   spaces and tabs   \n",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-read-input-normal-line",
+      "test-read-input-functional-check",
+      "test-read-input-edge-empty",
+      "test-read-input-dynamic-fuzz"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tline, err := reader.ReadString('\\n')\n\t\tif len(line) \u003e 0 {\n\t\t\tfmt.Print(line)\n\t\t}\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t}\n}"
+    }
+  },
+  "verified": false
+}

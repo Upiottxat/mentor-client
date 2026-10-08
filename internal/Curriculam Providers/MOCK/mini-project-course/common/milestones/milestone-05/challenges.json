@@ -1,0 +1,49 @@
+{
+  "milestone_id": "input-output-redirection",
+  "challenges": [
+    {
+      "id": "ch-1",
+      "level_id": "level-11-parse-redirection-operators",
+      "title": "Parse Output Redirection Operator",
+      "description": "A shell must separate redirection tokens from standard command arguments before passing execution parameters to exec. Implement a parser helper in this language.",
+      "task": "Write a Function that takes a slice of command tokens, detects if '\u003e' is present, and returns the cleaned command arguments along with the target filename if specified.",
+      "hints": [
+        "Iterate through the token slice looking for '\u003e' or '1\u003e' characters.",
+        "When found, the next token in the slice is typically the target file name."
+      ],
+      "placement": {
+        "capability_ids": [
+          "parse-redirection-operators",
+          "apply-file-redirection"
+        ],
+        "behavior_ids": [
+          "parse-redirection-operators"
+        ],
+        "introduced_at_level_id": "level-11-parse-redirection-operators",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "id": "ch-2",
+      "level_id": "level-12-input-output-redirection",
+      "title": "Configuring File Redirection for Commands",
+      "description": "Before running a command with output redirection, the shell must open the target file and hook it up to standard output.",
+      "task": "Implement a Go snippet using os.OpenFile to open a destination file for writing with truncation and creation flags, and assign it to os.Stdout.",
+      "hints": [
+        "Use os.OpenFile with flags os.O_CREATE|os.O_WRONLY|os.O_TRUNC.",
+        "Assign the resulting file descriptor or use syscall.Dup2 to map it to standard output."
+      ],
+      "placement": {
+        "capability_ids": [
+          "parse-redirection-operators",
+          "apply-file-redirection"
+        ],
+        "behavior_ids": [
+          "apply-file-redirection"
+        ],
+        "introduced_at_level_id": "level-12-input-output-redirection",
+        "difficulty": "medium"
+      }
+    }
+  ]
+}

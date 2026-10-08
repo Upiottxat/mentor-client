@@ -1,0 +1,168 @@
+level_id: level-12-input-output-redirection
+order: 12
+agnostic_test_spec:
+    level_id: level-12-input-output-redirection
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-apply-file-redirection-normal-output
+          description: Verifies that standard output can be saved to a file target correctly.
+          expected_behavior: Command output is successfully written into the designated target file instead of the console.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            echo hello > output.txt
+          expected: ""
+          matcher: exact
+        - name: test-apply-file-redirection-normal-input
+          description: Verifies that standard input can be loaded from a file target correctly.
+          expected_behavior: Command reads its standard input from the specified source file instead of the terminal.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            cat < input.txt
+          expected: |
+            content
+          matcher: exact
+        - name: test-apply-file-redirection-edge-invalid-file
+          description: Verifies correct handling of non-existent files during stream redirection setup.
+          expected_behavior: The shell catches the file access error, reports an appropriate message, and avoids crashing.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            cat < nonexistent_file_xyz.txt
+          expected: ""
+          matcher: exact
+        - name: test-apply-file-redirection-oracle-dynamic
+          description: Performs dynamic validation of stream redirection under varied runtime inputs.
+          expected_behavior: Ensures streams are correctly configured across diverse file names and operational conditions.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: |
+            echo dynamic_test > dynamic_out.txt
+          expected: ""
+          matcher: exact
+    test_ids:
+        - test-apply-file-redirection-normal-output
+        - test-apply-file-redirection-normal-input
+        - test-apply-file-redirection-edge-invalid-file
+        - test-apply-file-redirection-oracle-dynamic
+reference_solution:
+    language: go
+    files:
+        go.mod: |-
+            module simpleshell
+
+            go 1.18
+        main.go: |
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"os/exec"
+            	"strings"
+            )
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	for {
+            		line, err := reader.ReadString('\n')
+            		if err != nil {
+            			break
+            		}
+            		line = strings.TrimSpace(line)
+            		if line == "" {
+            			continue
+            		}
+
+            		args := parseArgs(line)
+            		if len(args) == 0 {
+            			continue
+            		}
+
+            		var cmdArgs []string
+            		var inputFile string
+            		var outputFile string
+            		var appendOutput bool
+
+            		for i := 0; i < len(args); i++ {
+            			if args[i] == "<" && i+1 < len(args) {
+            				inputFile = args[i+1]
+            				i++
+            			} else if args[i] == ">" && i+1 < len(args) {
+            				outputFile = args[i+1]
+            				appendOutput = false
+            				i++
+            			} else if args[i] == ">>" && i+1 < len(args) {
+            				outputFile = args[i+1]
+            				appendOutput = true
+            				i++
+            			} else {
+            				cmdArgs = append(cmdArgs, args[i])
+            			}
+            		}
+
+            		if len(cmdArgs) == 0 {
+            			continue
+            		}
+
+            		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+
+            		if inputFile != "" {
+            			file, err := os.Open(inputFile)
+            			if err != nil {
+            				continue
+            			}
+            			defer file.Close()
+            			cmd.Stdin = file
+            		} else {
+            			cmd.Stdin = os.Stdin
+            		}
+
+            		if outputFile != "" {
+            			flags := os.O_CREATE | os.O_WRONLY
+            			if appendOutput {
+            				flags |= os.O_APPEND
+            			} else {
+            				flags |= os.O_TRUNC
+            			}
+            			file, err := os.OpenFile(outputFile, flags, 0644)
+            			if err != nil {
+            				continue
+            			}
+            			defer file.Close()
+            			cmd.Stdout = file
+            		} else {
+            			cmd.Stdout = os.Stdout
+            		}
+
+            		cmd.Stderr = os.Stderr
+            		_ = cmd.Run()
+            	}
+            }
+
+            func parseArgs(input string) []string {
+            	var args []string
+            	var current strings.Builder
+            	inQuotes := false
+
+            	for _, r := range input {
+            		if r == '"' {
+            			inQuotes = !inQuotes
+            		} else if r == ' ' && !inQuotes {
+            			if current.Len() > 0 {
+            				args = append(args, current.String())
+            				current.Reset()
+            			}
+            		} else {
+            			current.WriteRune(r)
+            		}
+            	}
+            	if current.Len() > 0 {
+            		args = append(args, current.String())
+            	}
+            	return args
+            }

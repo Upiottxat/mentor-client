@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "milestone_id": "command-parsing",
+  "order": 2,
+  "artifacts": {
+    "overview": "overview.json",
+    "theory": "theory.json",
+    "questions": "questions.json",
+    "challenges": "challenges.json",
+    "diagrams": "diagrams.json",
+    "interactives": "interactives.json"
+  },
+  "language_artifacts": {
+    "go": {
+      "reference": "reference.json",
+      "examples": "examples.json",
+      "interactives": "interactives.json"
+    }
+  },
+  "server_artifacts": {
+    "solutions": "document-solutions.json",
+    "bossfight_contract": "milestone-02.bossfight.json"
+  },
+  "learning_path": [
+    {
+      "level_id": "level-tokenize-input-string",
+      "unlocks": {
+        "theory": [
+          "sec-tokenize"
+        ],
+        "questions": [
+          "q-1",
+          "q-3"
+        ],
+        "challenges": [
+          "ch-tokenize-basic"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    },
+    {
+      "level_id": "level-5-command-parsing",
+      "unlocks": {
+        "theory": [
+          "sec-quotes"
+        ],
+        "questions": [
+          "q-2"
+        ],
+        "challenges": [
+          "ch-parse-quotes"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    }
+  ]
+}

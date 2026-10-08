@@ -1,0 +1,34 @@
+{
+  "level_id": "level-11-parse-redirection-operators",
+  "order": 11,
+  "milestone_id": "input-output-redirection",
+  "language": "go",
+  "build": {
+    "required": true
+  },
+  "implementation_guidance": [
+    "Iterate through the slice of argument tokens looking for specific stream redirection symbols like greater-than or less-than characters.",
+    "When a redirection operator is found, capture the immediately following token as the target filename.",
+    "Ensure the returned command arguments exclude the redirection operator and target filename so downstream execution remains unaffected."
+  ],
+  "hints": [
+    {
+      "id": "hint-parse-redirection-operators-1",
+      "order": 1,
+      "type": "conceptual",
+      "content": "Think about scanning through the list of argument words one by one. When you encounter a specific symbol representing stream redirection, the word immediately following it represents the file destination rather than a command argument.",
+      "behavior_id": "parse-redirection-operators",
+      "reveal_after_attempts": 2,
+      "spoiler_risk": false
+    },
+    {
+      "id": "hint-parse-redirection-operators-2",
+      "order": 2,
+      "type": "directional",
+      "content": "Consider looping through your token slice with an index variable. Upon finding a redirection token, extract the next index item as the target file, and store remaining tokens in a separate collection for the command arguments.",
+      "behavior_id": "parse-redirection-operators",
+      "reveal_after_attempts": 4,
+      "spoiler_risk": false
+    }
+  ]
+}

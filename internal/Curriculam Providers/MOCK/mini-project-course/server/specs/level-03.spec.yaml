@@ -1,0 +1,65 @@
+level_id: level-3-handle-exit-command
+order: 3
+agnostic_test_spec:
+    level_id: level-3-handle-exit-command
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-handle-exit-command-normal-keyword
+          description: Verify that inputting the termination command successfully stops the session.
+          expected_behavior: The execution loop terminates cleanly without error outputs.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            exit
+          expected: ""
+          matcher: trim
+        - name: test-handle-exit-command-edge-eof
+          description: Verify that sending an end-of-file condition closes the session correctly.
+          expected_behavior: The session detects the end of the input stream and exits.
+          kind: predefined
+          run_on: test_and_submit
+          expected: ""
+          matcher: trim
+        - name: test-handle-exit-command-dynamic-fuzz
+          description: Ensure resilience against varied termination inputs and whitespace.
+          expected_behavior: The system correctly interprets valid termination triggers under varied padding.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: "   exit   \n"
+          expected: ""
+          matcher: trim
+    test_ids:
+        - test-handle-exit-command-normal-keyword
+        - test-handle-exit-command-edge-eof
+        - test-handle-exit-command-dynamic-fuzz
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"strings"
+            )
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	for {
+            		line, err := reader.ReadString('\n')
+            		if err != nil {
+            			break
+            		}
+            		cmd := strings.TrimSpace(line)
+            		if cmd == "exit" {
+            			break
+            		}
+            		if cmd != "" {
+            			fmt.Println(cmd)
+            		}
+            	}
+            }

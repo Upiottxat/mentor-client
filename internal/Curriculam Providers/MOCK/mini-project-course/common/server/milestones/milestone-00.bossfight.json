@@ -1,0 +1,76 @@
+{
+  "milestone_id": "",
+  "order": 0,
+  "title": "Redirecting Shell Streams",
+  "integrated_behavior_ids": [
+    "parse-redirection-operators",
+    "apply-file-redirection"
+  ],
+  "contract": {
+    "scenario": "The user runs a command in the Simple Shell that writes its output to a file using redirection, and then reads that file back using input redirection.",
+    "steps": [
+      {
+        "action": "Type echo hello \u003e output.txt",
+        "expected_outcome": "The shell parses the redirection operator and writes hello to output.txt."
+      },
+      {
+        "action": "Type cat \u003c output.txt",
+        "expected_outcome": "The shell parses the input redirection and prints hello to standard output."
+      }
+    ]
+  },
+  "concept_mcqs": [
+    {
+      "id": "boss-mcq-input-output-redirection-1",
+      "type": "concept",
+      "question": "When implementing output redirection using '\u003e' in a shell, how should the target file be opened by default if it already exists?",
+      "options": [
+        "Opened in append mode (O_APPEND)",
+        "Truncated to zero length (O_TRUNC)",
+        "Opened strictly for reading only",
+        "Rejected with an error preventing execution"
+      ],
+      "answer_index": 1,
+      "explanation": "Standard output redirection ('\u003e') typically truncates the existing file to zero length. Therefore, it should be opened with O_TRUNC along with O_WRONLY and O_CREATE."
+    },
+    {
+      "id": "boss-mcq-input-output-redirection-2",
+      "type": "concept",
+      "question": "What is the primary purpose of the dup2 system call (or The language's equivalent os.File redirection mechanics) before executing a command with redirection?",
+      "options": [
+        "To duplicate the command string for background execution",
+        "To create a backup copy of the original source code",
+        "To redirect standard streams by copying a file descriptor onto descriptors 0, 1, or 2",
+        "To spawn a separate process for handling asynchronous file IO"
+      ],
+      "answer_index": 2,
+      "explanation": "dup2 atomically replaces a standard file descriptor (like stdout 1 or stdin 0) with a target file descriptor, ensuring standard library calls or external processes write to or read from the file."
+    },
+    {
+      "id": "boss-mcq-input-output-redirection-3",
+      "type": "concept",
+      "question": "If a command line contains both an argument list and a redirection operator (e.g., 'echo hello \u003e file.txt'), how should the token parser handle the filename token following '\u003e'?",
+      "options": [
+        "Extracted as the redirection target file and excluded from the command's regular argument list",
+        "Concatenated with the redirection operator and passed as a flag to the executable",
+        "Ignored completely since redirection operators are handled entirely by the kernel",
+        "Passed as the final positional argument to the command execution function"
+      ],
+      "answer_index": 0,
+      "explanation": "The filename token immediately following the redirection operator must be extracted and treated as the redirection target rather than being passed as a standard command argument."
+    },
+    {
+      "id": "boss-mcq-input-output-redirection-4",
+      "type": "concept",
+      "question": "Why is it important to restore original standard file descriptors (or handle them carefully in a child process) after executing a redirected command in a shell?",
+      "options": [
+        "To prevent memory leaks in the Go garbage collector",
+        "To ensure the operating system releases the file locks immediately",
+        "To comply with POSIX thread safety requirements",
+        "To prevent subsequent shell commands from unexpectedly reading from or writing to the redirected files"
+      ],
+      "answer_index": 3,
+      "explanation": "If running built-in commands or maintaining a persistent shell loop, failing to restore standard descriptors means subsequent shell output or input will permanently target the redirected files."
+    }
+  ]
+}

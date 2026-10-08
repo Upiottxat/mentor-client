@@ -1,0 +1,11 @@
+milestone_id: built-in-commands
+diagrams:
+    - id: diag-dispatch
+      title: Command Dispatch Workflow
+      format: mermaid
+      content: |-
+        graph TD
+        Input[User Input] --> Parser[Command Parser]
+        Parser --> Check{Is Built-in?}
+        Check -->|Yes| Internal[Execute Internal Handler]
+        Check -->|No| External[Spawn External Process]

@@ -1,0 +1,33 @@
+{
+  "id": "go",
+  "name": "Go",
+  "version": "0.1.0",
+  "status": "development",
+  "project_detection": {
+    "required_files": [
+      "go.mod"
+    ]
+  },
+  "commands": {
+    "build": {
+      "executable": "go",
+      "arguments": [
+        "build",
+        "-o",
+        ".mentor-build/app",
+        "./..."
+      ]
+    },
+    "run": {
+      "executable": "./.mentor-build/app",
+      "arguments": []
+    }
+  },
+  "environment": {
+    "inherit_system_environment": true
+  },
+  "timeouts": {
+    "build_seconds": 30,
+    "test_seconds": 10
+  }
+}

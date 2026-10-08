@@ -1,0 +1,13 @@
+milestone_id: repl-loop
+diagrams:
+    - id: diag-repl-flow
+      title: Read-Eval-Print Loop Workflow
+      format: mermaid
+      content: |-
+        graph TD
+        Start([Start Shell]) --> Display[Display Prompt]
+        Display --> Read[Read User Input]
+        Read --> Check{Exit Command or EOF?}
+        Check -->|Yes| Exit([Terminate Cleanly])
+        Check -->|No| Eval[Process Command]
+        Eval --> Display

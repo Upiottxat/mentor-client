@@ -1,0 +1,10 @@
+milestone_id: process-execution
+order: 3
+core_concept: Process execution bridges the shell interface and the operating system kernel by spawning independent child processes and managing their lifecycle.
+overview: Moving beyond parsing commands and managing internal state, an interactive shell must ultimately bring instructions to life by running external programs. This milestone introduces the mechanics of process creation, where a parent shell delegates tasks to the operating system kernel, creating new execution contexts for system binaries and custom utilities. By learning how to spawn processes, wait for them to finish, and handle errors robustly, you transform your text interface into a fully functional command dispatcher.
+recap:
+    summary: Completed milestone 3 (Process Execution), establishing core understanding of Process execution bridges the shell interface and the operating system kernel by spawning independent child processes and managing their lifecycle..
+    key_takeaways:
+        - Process execution bridges the shell interface and the operating system kernel by spawning independent child processes and managing their lifecycle.
+    integration_readiness:
+        - Ready for downstream milestones and integration challenges.

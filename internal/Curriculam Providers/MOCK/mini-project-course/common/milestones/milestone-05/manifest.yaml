@@ -1,0 +1,41 @@
+schema_version: 1
+milestone_id: input-output-redirection
+order: 5
+artifacts:
+    overview: overview.yaml
+    theory: theory.yaml
+    questions: questions.yaml
+    challenges: challenges.yaml
+    diagrams: diagrams.yaml
+    interactives: interactives.yaml
+language_artifacts:
+    go:
+        reference: reference.yaml
+        examples: examples.yaml
+        interactives: interactives.yaml
+server_artifacts:
+    solutions: document-solutions.yaml
+    bossfight_contract: milestone-05.bossfight.yaml
+learning_path:
+    - level_id: level-11-parse-redirection-operators
+      unlocks:
+        theory:
+            - sec-parse-operators
+        questions:
+            - q-1
+            - q-3
+        challenges:
+            - ch-1
+        diagrams: []
+        interactives: []
+    - level_id: level-12-input-output-redirection
+      unlocks:
+        theory:
+            - sec-apply-redirection
+        questions:
+            - q-2
+            - q-4
+        challenges:
+            - ch-2
+        diagrams: []
+        interactives: []

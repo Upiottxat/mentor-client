@@ -1,0 +1,14 @@
+milestone_id: command-parsing
+sections:
+    - id: sec-tokenize
+      title: Tokenize Input String
+      content: Tokenization is the foundational process of breaking a continuous stream of characters into smaller, meaningful elements known as tokens. Imagine a conveyor belt moving raw text items past a scanner; when the scanner detects a specific boundary character, such as a space or a newline, it marks the end of one item and the beginning of the next. In systems programming, this boundary is typically any whitespace character. Without tokenization, an entire command line would be treated as a single massive file path or command name, rendering execution impossible. The parser reads through the input character by character or word by word, accumulating non-whitespace characters into a growing buffer until a separator is encountered. Once the separator is hit, the accumulated buffer is emitted as a complete token, and the parser resets to capture the next segment. This simple yet powerful mechanism transforms unstructured user input into a slice of distinct command arguments ready for downstream processing.
+      introduced_at_level_id: level-tokenize-input-string
+      used_by_levels: []
+      is_shared: false
+    - id: sec-quotes
+      title: Handle Quoted Arguments
+      content: While simple whitespace splitting works for basic commands, real-world usage frequently requires passing arguments that contain spaces themselves, such as file paths with spaces or multi-word search queries. To solve this, parsers introduce stateful scanning through the use of quotation marks. Think of quotes as toggle switches for the parser rules. When the parser encounters an opening quote, it enters a specialized state where whitespace delimiters are temporarily ignored. Instead of treating a space as a boundary, the parser accumulates spaces inside the token buffer until a matching closing quote is encountered. This state machine approach ensures that characters like spaces, which normally separate tokens, are treated as literal data when enclosed within quotes. Implementing this requires tracking whether the parser is currently inside a quoted region, ensuring that malformed quotes or nested scenarios are handled gracefully according to defined syntax rules.
+      introduced_at_level_id: level-5-command-parsing
+      used_by_levels: []
+      is_shared: false

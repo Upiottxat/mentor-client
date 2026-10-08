@@ -1,0 +1,2747 @@
+curriculum:
+    id: simple-shell
+    name: Simple Shell
+    version: 0.1.0
+    target_language: go
+    difficulty: beginner
+    ecosystem_languages:
+        - language: go
+          role: primary
+          purpose: Main implementation language for the interactive shell.
+          extension: .go
+milestones:
+    - id: repl-loop
+      order: 1
+      title: Read-Eval-Print Loop
+      goal: Establish the foundational interactive loop that displays a prompt, reads user input, and exits cleanly.
+      required_capabilities:
+        - id: display-shell-prompt
+          description: Output a visible prompt indicating the shell is ready for user input.
+        - id: read-user-input
+          description: Read standard input lines from the user interactively.
+        - id: handle-exit-command
+          description: Gracefully terminate the shell upon receiving an exit command or EOF.
+      level_ids:
+        - display-shell-prompt-level
+        - level-2-read-user-input
+        - level-3-handle-exit-command
+      boss_fight:
+        title: Interactive REPL Integration
+        public_preview: Combine prompt display, line reading, and exit handling into a working interactive loop.
+        integrated_behavior_ids:
+            - display-shell-prompt
+            - read-user-input
+            - handle-exit-command
+        contract:
+            scenario: A user starts the shell, sees a prompt, enters some text, and then exits via command.
+            steps:
+                - action: Start the shell and observe the initial prompt
+                  expected_outcome: The shell prints '> '
+                - action: Send input 'hello'
+                  expected_outcome: The shell reads the input and displays a new prompt '> '
+                - action: Send input 'exit'
+                  expected_outcome: The shell terminates gracefully with exit code 0
+        harness:
+            language: go
+            test_code: |-
+                package main
+
+                import (
+                	"bytes"
+                	"io"
+                	"os"
+                	"os/exec"
+                	"strings"
+                	"testing"
+                )
+
+                func TestREPL(t *testing.T) {
+                	cmd := exec.Command("go", "run", "main.go")
+                	stdin, err := cmd.StdinPipe()
+                	if err != nil {
+                		t.Fatalf("failed to get stdin pipe: %v", err)
+                	}
+                	var stdout bytes.Buffer
+                	cmd.Stdout = &stdout
+
+                	if err := cmd.Start(); err != nil {
+                		t.Fatalf("failed to start command: %v", err)
+                	}
+
+                	_, err = io.WriteString(stdin, "hello\nexit\n")
+                	if err != nil {
+                		t.Fatalf("failed to write to stdin: %v", err)
+                	}
+
+                	err = cmd.Wait()
+                	if err != nil {
+                		t.Fatalf("command exited with error: %v", err)
+                	}
+
+                	output := stdout.String()
+                	Expected := "> > > "
+                	if !strings.Contains(output, "> ") {
+                		t.Errorf("expected prompt not found in output: %q", output)
+                	}
+                }
+            expected_output: '> > > '
+        concept_mcqs:
+            - id: boss-mcq-repl-loop-1
+              type: concept
+              question: Why is it important to explicitly flush the standard output stream (stdout) immediately after writing a shell prompt?
+              options:
+                - To clear the input buffer of any trailing newline characters
+                - To allocate memory for the upcoming user command string
+                - To ensure the prompt is immediately displayed when output is buffered
+                - To reset the terminal color codes back to default values
+              answer_index: 2
+              explanation: Standard output is typically line-buffered when connected to a terminal, but block-buffered or fully buffered when redirected. Flushing ensures the prompt appears immediately.
+            - id: boss-mcq-repl-loop-2
+              type: concept
+              question: When reading input in a Go REPL using bufio.Scanner, what is the primary advantage over directly using fmt.Scan?
+              options:
+                - bufio.Scanner automatically executes any shell commands it reads
+                - bufio.Scanner safely reads arbitrarily long lines separated by newlines, including spaces
+                - fmt.Scan cannot be used with standard input streams in Go
+                - bufio.Scanner prevents buffer overflows by restricting input to 8 bytes
+              answer_index: 1
+              explanation: bufio.Scanner allows reading entire lines including spaces easily via Text() or Bytes(), whereas fmt.Scan splits inputs by whitespace.
+            - id: boss-mcq-repl-loop-3
+              type: concept
+              question: How should a robust Read-Eval-Print Loop handle an EOF (End-Of-File) condition on standard input (e.g., when the user presses Ctrl+D)?
+              options:
+                - Break out of the REPL loop and terminate the program cleanly with exit code 0
+                - Automatically restart the standard input stream and display an error warning
+                - Ignore the EOF signal and wait indefinitely for a keyboard interrupt
+                - Panic immediately to alert the operating system of an abnormal stream termination
+              answer_index: 0
+              explanation: Receiving EOF from standard input indicates the input stream has closed, so the REPL should exit cleanly rather than looping infinitely.
+    - id: command-parsing
+      order: 2
+      title: Command Parsing and Tokenization
+      goal: Break the raw user input string into executable command names and distinct argument tokens.
+      required_capabilities:
+        - id: tokenize-input-string
+          description: Split a raw input string into whitespace-separated argument tokens.
+        - id: handle-quoted-arguments
+          description: Support quoted strings as single arguments containing whitespace.
+      level_ids:
+        - level-tokenize-input-string
+        - level-5-command-parsing
+      boss_fight:
+        title: Advanced Command Line Parser
+        public_preview: Test your ability to parse complex command lines containing both normal whitespace-separated tokens and quoted arguments with internal spaces.
+        integrated_behavior_ids:
+            - tokenize-input-string
+            - handle-quoted-arguments
+        contract:
+            scenario: A user provides an input string containing a mix of standard whitespace-separated arguments and quoted arguments containing spaces. The parser must correctly tokenize the entire input string according to both rules.
+            steps:
+                - action: Pass the input string 'echo hello world' to the parser.
+                  expected_outcome: 'Returns three distinct tokens: ''echo'', ''hello'', and ''world''.'
+                - action: Pass the input string 'echo "hello world" foo' to the parser.
+                  expected_outcome: 'Returns three distinct tokens: ''echo'', ''hello world'', and ''foo''.'
+        harness:
+            language: go
+            setup: Ensure main.go reads from stdin, parses tokens using both standard whitespace splitting and quote handling, and prints the resulting slice representation.
+            test_code: |-
+                package main
+                import (
+                	"fmt"
+                	"os/exec"
+                	"strings"
+                )
+                func main() {
+                	// Test simple tokenization
+                	cmd1 := exec.Command("go", "run", "main.go")
+                	cmd1.Stdin = strings.NewReader("echo hello world\n")
+                	out1, _ := cmd1.CombinedOutput()
+                	fmt.Println(string(out1))
+
+                	// Test quoted arguments
+                	cmd2 := exec.Command("go", "run", "main.go")
+                	cmd2.Stdin = strings.NewReader("echo \"hello world\" foo\n")
+                	out2, _ := cmd2.CombinedOutput()
+                	fmt.Println(string(out2))
+                }
+            expected_output: |
+                Tokens: [echo hello world]
+                Tokens: [echo hello world foo]
+        concept_mcqs:
+            - id: boss-mcq-command-parsing-1
+              type: concept
+              question: When implementing simple whitespace-based tokenization in this language, which standard library function or package is most idiomatic for splitting a command string?
+              options:
+                - os.SplitString
+                - strings.Fields
+                - bufio.ScanLines
+                - bytes.Split
+              answer_index: 1
+              explanation: strings.Fields splits a string around each instance of one or more consecutive white space characters, handling multiple spaces gracefully, which is ideal for basic shell tokenization.
+            - id: boss-mcq-command-parsing-2
+              type: concept
+              question: What is the primary operational challenge when introducing quoted arguments (e.g., single or double quotes) into a shell command tokenizer?
+              options:
+                - Memory allocation overhead increases significantly
+                - Go's string type becomes mutable
+                - Whitespace characters within quotes must not act as token delimiters
+                - Command names can no longer be the first token
+              answer_index: 2
+              explanation: Quoted arguments require stateful scanning to treat whitespace characters inside the quotes as literal characters rather than argument delimiters, complicating a simple stateless split.
+            - id: boss-mcq-command-parsing-3
+              type: concept
+              question: How should a robust shell parser handle consecutive whitespace characters (e.g., multiple spaces or tabs) between command arguments when no quotes are present?
+              options:
+                - They should be treated as a single delimiter and ignored, producing no empty tokens
+                - They must throw a syntax error immediately
+                - Each space must generate a distinct empty string token
+                - They should be converted into escape characters
+              answer_index: 0
+              explanation: Consecutive whitespace characters should be collapsed and ignored as delimiters, ensuring they do not produce empty string tokens unless specifically enclosed in quotes.
+    - id: process-execution
+      order: 3
+      title: Process Execution
+      goal: Execute external programs by spawning child processes and waiting for their completion.
+      required_capabilities:
+        - id: spawn-child-process
+          description: Execute external commands using system binaries and passed arguments.
+        - id: wait-for-process-completion
+          description: Block the shell until the spawned child process finishes execution.
+        - id: handle-execution-errors
+          description: Gracefully handle command-not-found and execution failures without crashing.
+      level_ids:
+        - level-6-process-execution
+        - level-wait-for-process-completion
+        - level-8
+      boss_fight:
+        title: Command Runner Integration
+        public_preview: Combine child process spawning, completion waiting, and error handling into a unified command execution flow.
+        integrated_behavior_ids:
+            - spawn-child-process
+            - wait-for-process-completion
+            - handle-execution-errors
+        contract:
+            scenario: Execute a valid command, wait for its completion, and attempt to run an invalid command to test error handling.
+            steps:
+                - action: Run a valid external command like 'echo hello'
+                  expected_outcome: The command prints 'hello' to stdout and exits with code 0.
+                - action: Run an invalid non-existent command like 'nonexistentcmd123'
+                  expected_outcome: The shell catches the execution error and prints a descriptive error message without crashing.
+        harness:
+            language: go
+            setup: Ensure the Go environment is initialized.
+            test_code: |-
+                package main
+
+                import (
+                	"bytes"
+                	"fmt"
+                	"os/exec"
+                )
+
+                func main() {
+                	cmd1 := exec.Command("echo", "hello")
+                	var out bytes.Buffer
+                	cmd1.Stdout = &out
+                	err := cmd1.Run()
+                	if err != nil {
+                		fmt.Printf("Error: %v\n", err)
+                	}
+                	fmt.Print(out.String())
+
+                	cmd2 := exec.Command("nonexistentcmd123")
+                	err2 := cmd2.Run()
+                	if err2 != nil {
+                		fmt.Println("Command execution failed gracefully")
+                	}
+                }
+            expected_output: |
+                hello
+                Command execution failed gracefully
+        concept_mcqs:
+            - id: boss-mcq-process-execution-1
+              type: concept
+              question: When spawning an external process in this language using os/exec, why is it important to carefully separate the command name from its arguments instead of concatenating them into a single string?
+              options:
+                - Go requires a single string to optimize memory allocation inside the garbage collector.
+                - Separating them allows the operating system to automatically run the command in background mode.
+                - It prevents command injection vulnerabilities and ensures correct parsing of arguments with spaces.
+                - The underlying operating system exec system call only accepts arrays of integers.
+              answer_index: 2
+              explanation: Passing command and arguments as separate parameters prevents shell injection vulnerabilities and ensures the execve system call correctly interprets the executable path and its argv array.
+            - id: boss-mcq-process-execution-2
+              type: concept
+              question: What is the primary operational difference between using Cmd.Run() and Cmd.Start() followed by Cmd.Wait() in The language's exec package?
+              options:
+                - Cmd.Run() runs the process asynchronously while Cmd.Start() runs it synchronously.
+                - Cmd.Run() blocks until the process finishes, whereas Cmd.Start() launches the process and returns immediately without waiting.
+                - Cmd.Run() captures standard error automatically, while Cmd.Start() discards it.
+                - There is no functional difference; they are aliases for the same underlying function.
+              answer_index: 1
+              explanation: Cmd.Run() starts the command and immediately blocks waiting for its completion (equivalent to Start() followed by Wait()). Cmd.Start() non-blockingly launches the process, returning control immediately.
+            - id: boss-mcq-process-execution-3
+              type: concept
+              question: How should a shell robustly handle a scenario where a user inputs a command that does not exist in the system's PATH?
+              options:
+                - Terminate the shell process immediately to prevent security breaches.
+                - Automatically download the missing binary from the official repository.
+                - Ignore the error and execute the next command as a shell builtin.
+                - Capture the execution error, print a descriptive error message to stderr, and return control to the user prompt.
+              answer_index: 3
+              explanation: When a command is missing or execution fails, the shell should catch the specific error returned by the execution function (such as exec.ErrNotFound) and print a clean error message to standard error without crashing.
+    - id: built-in-commands
+      order: 4
+      title: Built-in Shell Commands
+      goal: Implement internal shell commands that alter the shell state directly rather than launching external processes.
+      required_capabilities:
+        - id: implement-cd-command
+          description: Change the current working directory of the shell process.
+        - id: dispatch-builtins
+          description: Route recognized command names to built-in handlers instead of execution.
+      level_ids:
+        - level-implement-cd-command
+        - level-10-built-in-commands
+      boss_fight:
+        title: Shell Built-ins Integration
+        public_preview: Test routing built-in commands and changing the current working directory.
+        integrated_behavior_ids:
+            - implement-cd-command
+            - dispatch-builtins
+        contract:
+            scenario: A user interacts with the shell, navigating directories using the cd command and running built-in commands.
+            steps:
+                - action: Execute the cd command to change the working directory
+                  expected_outcome: The shell successfully changes the current working directory.
+                - action: Execute a recognized built-in command
+                  expected_outcome: The shell routes the command to its built-in handler and prints the expected output.
+        harness:
+            language: go
+            setup: Initialize test directory structure and build the shell binary.
+            test_code: |-
+                package main
+
+                import (
+                	"fmt"
+                	"os/exec"
+                )
+
+                func main() {
+                	cmd := exec.Command("go", "run", "main.go")
+                	err := cmd.Run()
+                	if err != nil {
+                		fmt.Printf("Error: %v\n", err)
+                	}
+                	fmt.Println("Directory changed and built-in dispatched successfully")
+                }
+            expected_output: Directory changed and built-in dispatched successfully
+        concept_mcqs:
+            - id: boss-mcq-built-in-commands-1
+              type: concept
+              question: Why must the 'cd' command be implemented as a built-in shell command rather than an external executable process in this language?
+              options:
+                - External binaries cannot execute file path operations.
+                - Go's os/exec package explicitly forbids changing directories.
+                - An external process changes only its own working directory, not the parent shell's process state.
+                - Built-in commands execute faster because they skip disk reads.
+              answer_index: 2
+              explanation: External process isolation requires built-ins for state mutations.
+            - id: boss-mcq-built-in-commands-2
+              type: concept
+              question: When implementing a built-in command dispatcher in a Go shell, what is the most robust way to check if a parsed command string is a built-in?
+              options:
+                - A long chain of nested if/else statements comparing string lengths.
+                - A lookup map mapping command strings to handler function pointers.
+                - Reflection on the main package scope to find matching function names.
+                - Sending an IPC signal to check command existence.
+              answer_index: 1
+              explanation: Map lookups provide clean O(1) routing.
+            - id: boss-mcq-built-in-commands-3
+              type: concept
+              question: How should a shell built-in command handler handle execution errors, such as a non-existent directory passed to 'cd'?
+              options:
+                - Return the error gracefully to the shell loop so it can print a message and keep running.
+                - Panic immediately to trigger the global crash recovery handler.
+                - Exit the shell process entirely with status code 1.
+                - Ignore the error and remain in the current working directory.
+              answer_index: 0
+              explanation: Graceful error returns prevent shell termination.
+    - id: input-output-redirection
+      order: 5
+      title: Input and Output Redirection
+      goal: Support redirecting command standard input and standard output streams to files.
+      required_capabilities:
+        - id: parse-redirection-operators
+          description: Detect redirection symbols like output redirection and file targets from tokens.
+        - id: apply-file-redirection
+          description: Configure standard streams to read from or write to specified files before execution.
+      level_ids:
+        - level-11-parse-redirection-operators
+        - level-12-input-output-redirection
+      boss_fight:
+        title: Redirecting Shell Streams
+        public_preview: Combine parsing of redirection operators with configuring file streams to execute commands with redirected input and output.
+        integrated_behavior_ids:
+            - parse-redirection-operators
+            - apply-file-redirection
+        contract:
+            scenario: The user runs a command in the Simple Shell that writes its output to a file using redirection, and then reads that file back using input redirection.
+            steps:
+                - action: Type echo hello > output.txt
+                  expected_outcome: The shell parses the redirection operator and writes hello to output.txt.
+                - action: Type cat < output.txt
+                  expected_outcome: The shell parses the input redirection and prints hello to standard output.
+        harness:
+            language: go
+            test_code: |-
+                package main
+                import (
+                	"bytes"
+                	"testing"
+                )
+                func TestShellRedirection(t *testing.T) {
+                	var stdout bytes.Buffer
+                	_ = stdout
+                }
+            expected_output: hello
+        concept_mcqs:
+            - id: boss-mcq-input-output-redirection-1
+              type: concept
+              question: When implementing output redirection using '>' in a shell, how should the target file be opened by default if it already exists?
+              options:
+                - Opened in append mode (O_APPEND)
+                - Truncated to zero length (O_TRUNC)
+                - Opened strictly for reading only
+                - Rejected with an error preventing execution
+              answer_index: 1
+              explanation: Standard output redirection ('>') typically truncates the existing file to zero length. Therefore, it should be opened with O_TRUNC along with O_WRONLY and O_CREATE.
+            - id: boss-mcq-input-output-redirection-2
+              type: concept
+              question: What is the primary purpose of the dup2 system call (or The language's equivalent os.File redirection mechanics) before executing a command with redirection?
+              options:
+                - To duplicate the command string for background execution
+                - To create a backup copy of the original source code
+                - To redirect standard streams by copying a file descriptor onto descriptors 0, 1, or 2
+                - To spawn a separate process for handling asynchronous file IO
+              answer_index: 2
+              explanation: dup2 atomically replaces a standard file descriptor (like stdout 1 or stdin 0) with a target file descriptor, ensuring standard library calls or external processes write to or read from the file.
+            - id: boss-mcq-input-output-redirection-3
+              type: concept
+              question: If a command line contains both an argument list and a redirection operator (e.g., 'echo hello > file.txt'), how should the token parser handle the filename token following '>'?
+              options:
+                - Extracted as the redirection target file and excluded from the command's regular argument list
+                - Concatenated with the redirection operator and passed as a flag to the executable
+                - Ignored completely since redirection operators are handled entirely by the kernel
+                - Passed as the final positional argument to the command execution function
+              answer_index: 0
+              explanation: The filename token immediately following the redirection operator must be extracted and treated as the redirection target rather than being passed as a standard command argument.
+            - id: boss-mcq-input-output-redirection-4
+              type: concept
+              question: Why is it important to restore original standard file descriptors (or handle them carefully in a child process) after executing a redirected command in a shell?
+              options:
+                - To prevent memory leaks in the Go garbage collector
+                - To ensure the operating system releases the file locks immediately
+                - To comply with POSIX thread safety requirements
+                - To prevent subsequent shell commands from unexpectedly reading from or writing to the redirected files
+              answer_index: 3
+              explanation: If running built-in commands or maintaining a persistent shell loop, failing to restore standard descriptors means subsequent shell output or input will permanently target the redirected files.
+levels:
+    - id: display-shell-prompt-level
+      order: 1
+      milestone_id: repl-loop
+      title: Display Shell Prompt
+      goal: Output a visible prompt indicating the shell is ready for user input.
+      narrative:
+        hook: Every interactive command-line tool begins with a blank slate and no visible indicator of life.
+        motivation: Without a visual prompt, users cannot know if the program is running, hung, or waiting for input.
+        concrete_demo: When launching the program, a clean indicator string instantly appears on the screen to show that the system is listening and ready.
+      difficulty: easy
+      learning_objectives:
+        - Understand how a command-line interface communicates readiness through a prompt string.
+        - Learn how to write text directly to the standard output stream.
+      constraints:
+        - Do not read any input from standard input.
+        - Do not implement an interactive loop or continuous execution.
+        - Do not mention any specific programming language in common fields.
+      deliverables:
+        - A program that outputs the designated shell prompt string to standard output.
+      behaviors:
+        - id: display-shell-prompt
+          description: Prints a clear, visible shell prompt to standard output.
+      tests:
+        - id: test-prompt-normal-output
+          behavior_ids:
+            - display-shell-prompt
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify that the standard output contains the expected prompt string.
+          expected_behavior: The shell writes the prompt string to standard output upon startup.
+          io:
+            expected: '$ '
+            matcher: exact
+        - id: test-prompt-functional-check
+          behavior_ids:
+            - display-shell-prompt
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify the prompt appears correctly in a standard invocation scenario.
+          expected_behavior: The correct prompt indicator is rendered without errors.
+          io:
+            expected: '$ '
+            matcher: trim
+        - id: test-prompt-edge-empty-environment
+          behavior_ids:
+            - display-shell-prompt
+          category: functional
+          case_type: edge
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Verify prompt rendering under minimal execution parameters.
+          expected_behavior: The shell successfully displays the prompt even with an empty environment.
+          io:
+            expected: '$ '
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Use the standard output printing mechanism provided by your language runtime to display the prompt string.
+            - Ensure no trailing unintended characters cause discrepancies with the expected output.
+        hints:
+            - id: hint-display-shell-prompt-1
+              order: 1
+              type: conceptual
+              content: Interactive command-line applications typically begin by writing a small indicator string to the standard output stream to signal readiness to the user.
+              behavior_id: display-shell-prompt
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-display-shell-prompt-2
+              order: 2
+              type: directional
+              content: Look for the primary output writing function in your runtime environment that sends text directly to standard output without adding extra formatting unless desired.
+              behavior_id: display-shell-prompt
+              reveal_after_attempts: 4
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: display-shell-prompt-level
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-prompt-normal-output
+              description: Verify that the standard output contains the expected prompt string.
+              expected_behavior: The shell writes the prompt string to standard output upon startup.
+              kind: predefined
+              run_on: test_and_submit
+              expected: '$ '
+              matcher: exact
+            - name: test-prompt-functional-check
+              description: Verify the prompt appears correctly in a standard invocation scenario.
+              expected_behavior: The correct prompt indicator is rendered without errors.
+              kind: predefined
+              run_on: test_and_submit
+              expected: '$ '
+              matcher: trim
+            - name: test-prompt-edge-empty-environment
+              description: Verify prompt rendering under minimal execution parameters.
+              expected_behavior: The shell successfully displays the prompt even with an empty environment.
+              kind: dynamic_oracle
+              run_on: submit_only
+              expected: '$ '
+              matcher: exact
+        test_ids:
+            - test-prompt-normal-output
+            - test-prompt-functional-check
+            - test-prompt-edge-empty-environment
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import "fmt"
+
+                func main() {
+                	fmt.Print("$ ")
+                }
+    - id: level-2-read-user-input
+      order: 2
+      milestone_id: repl-loop
+      title: Read User Input
+      goal: Read standard input lines from the user interactively.
+      narrative:
+        hook: Your interface can successfully display a prompt, but it currently lacks any mechanism to receive feedback or commands from the person sitting at the terminal.
+        motivation: Without the ability to capture incoming text streams, any interactive program remains completely deaf to user intent, rendering dynamic operation impossible.
+        concrete_demo: When an operator types a sequence of characters into the terminal window and presses enter, the application captures those exact keystrokes as a continuous data stream for processing.
+      difficulty: medium
+      learning_objectives:
+        - Capture raw text streams provided through standard input streams.
+        - Process incoming text lines sequentially for further interpretation.
+      constraints:
+        - Do not implement command execution or argument parsing in this level.
+        - Operate strictly on standard input channels.
+      deliverables:
+        - A routine capable of capturing a single line of text from standard input.
+      behaviors:
+        - id: read-user-input
+          description: The system successfully reads standard input lines provided by the user.
+      tests:
+        - id: test-read-input-normal-line
+          behavior_ids:
+            - read-user-input
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify that standard input strings are captured correctly.
+          expected_behavior: The input stream data is returned accurately without corruption.
+          io:
+            stdin: |
+                hello world
+            expected: |
+                hello world
+            matcher: exact
+        - id: test-read-input-functional-check
+          behavior_ids:
+            - read-user-input
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify processing of multiple sequential input streams.
+          expected_behavior: Sequential lines of input are read one after another.
+          io:
+            stdin: |
+                first line
+                second line
+            expected: |
+                first line
+                second line
+            matcher: exact
+        - id: test-read-input-edge-empty
+          behavior_ids:
+            - read-user-input
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify behavior when receiving an immediate end of input signal.
+          expected_behavior: The reader handles empty input streams gracefully.
+          io:
+            expected: ""
+            matcher: exact
+        - id: test-read-input-dynamic-fuzz
+          behavior_ids:
+            - read-user-input
+          category: functional
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Verify resilience against varied whitespace patterns.
+          expected_behavior: Arbitrary whitespace within lines is preserved during reading.
+          io:
+            stdin: "   spaces and tabs   \n"
+            expected: "   spaces and tabs   \n"
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Look for standard library facilities designed for buffered text input streams.
+            - Ensure proper handling of line termination characters when reading input.
+        hints:
+            - id: hint-read-user-input-1
+              order: 1
+              type: conceptual
+              content: Interactive command-line applications must listen to the standard input stream to accept text data supplied by the operator.
+              behavior_id: read-user-input
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-read-user-input-2
+              order: 2
+              type: directional
+              content: Consider utilizing buffered input reading abstractions provided by standard system libraries to handle text line by line efficiently.
+              behavior_id: read-user-input
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-read-user-input-3
+              order: 3
+              type: structural
+              content: Initialize a scanner or reader object linked to standard input, then invoke methods that scan until a newline boundary is encountered.
+              behavior_id: read-user-input
+              reveal_after_attempts: 6
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-2-read-user-input
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-read-input-normal-line
+              description: Verify that standard input strings are captured correctly.
+              expected_behavior: The input stream data is returned accurately without corruption.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                hello world
+              expected: |
+                hello world
+              matcher: exact
+            - name: test-read-input-functional-check
+              description: Verify processing of multiple sequential input streams.
+              expected_behavior: Sequential lines of input are read one after another.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                first line
+                second line
+              expected: |
+                first line
+                second line
+              matcher: exact
+            - name: test-read-input-edge-empty
+              description: Verify behavior when receiving an immediate end of input signal.
+              expected_behavior: The reader handles empty input streams gracefully.
+              kind: predefined
+              run_on: test_and_submit
+              expected: ""
+              matcher: exact
+            - name: test-read-input-dynamic-fuzz
+              description: Verify resilience against varied whitespace patterns.
+              expected_behavior: Arbitrary whitespace within lines is preserved during reading.
+              kind: dynamic_oracle
+              run_on: submit_only
+              stdin: "   spaces and tabs   \n"
+              expected: "   spaces and tabs   \n"
+              matcher: exact
+        test_ids:
+            - test-read-input-normal-line
+            - test-read-input-functional-check
+            - test-read-input-edge-empty
+            - test-read-input-dynamic-fuzz
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                )
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	for {
+                		line, err := reader.ReadString('\n')
+                		if len(line) > 0 {
+                			fmt.Print(line)
+                		}
+                		if err != nil {
+                			break
+                		}
+                	}
+                }
+    - id: level-3-handle-exit-command
+      order: 3
+      milestone_id: repl-loop
+      title: Handle Exit Command
+      goal: Gracefully terminate the shell upon receiving an exit command or EOF.
+      narrative:
+        hook: Your interactive loop can now display prompts and read inputs, but it traps you in an infinite cycle with no way out except force-killing the process.
+        motivation: A robust application must be polite and cooperative, knowing when its work is complete so it can release system resources and return control back to the operating system cleanly.
+        concrete_demo: When an operator types the designated shutdown token or sends an end-of-file signal, the interface acknowledges the request and closes down orderly without raising any errors.
+      difficulty: easy
+      learning_objectives:
+        - Recognize specific exit commands entered into the interaction loop.
+        - Detect end-of-file conditions from standard input streams.
+        - Perform a clean and orderly exit sequence without crashing.
+      constraints:
+        - Must terminate immediately upon receiving the designated exit command.
+        - Must terminate gracefully when reaching end-of-file on input streams.
+        - Do not leave lingering processes or panic on normal termination paths.
+      deliverables:
+        - An interaction loop capable of detecting termination conditions.
+        - A reliable shutdown handler for normal program completion.
+      behaviors:
+        - id: handle-exit-command
+          description: The system detects termination signals or specific exit requests and stops execution cleanly.
+      tests:
+        - id: test-handle-exit-command-normal-keyword
+          behavior_ids:
+            - handle-exit-command
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify that inputting the termination command successfully stops the session.
+          expected_behavior: The execution loop terminates cleanly without error outputs.
+          io:
+            stdin: |
+                exit
+            expected: ""
+            matcher: trim
+        - id: test-handle-exit-command-edge-eof
+          behavior_ids:
+            - handle-exit-command
+          category: functional
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify that sending an end-of-file condition closes the session correctly.
+          expected_behavior: The session detects the end of the input stream and exits.
+          io:
+            expected: ""
+            matcher: trim
+        - id: test-handle-exit-command-dynamic-fuzz
+          behavior_ids:
+            - handle-exit-command
+          category: integration
+          case_type: edge
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Ensure resilience against varied termination inputs and whitespace.
+          expected_behavior: The system correctly interprets valid termination triggers under varied padding.
+          io:
+            stdin: "   exit   \n"
+            expected: ""
+            matcher: trim
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Check incoming lines against your designated termination keyword before processing them further.
+            - Inspect the result of your reading mechanism to detect end-of-file or stream closure conditions.
+            - Ensure your loop breaks out of execution cleanly when either termination trigger is encountered.
+        hints:
+            - id: hint-handle-exit-command-1
+              order: 1
+              type: conceptual
+              content: Think about how a loop needs a breaking condition. Beyond normal task execution, you should evaluate every piece of input against a specific sentinel value that signals the end of the session, as well as checking if the input source has closed completely.
+              behavior_id: handle-exit-command
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-handle-exit-command-2
+              order: 2
+              type: directional
+              content: Compare the trimmed user input string with your chosen shutdown keyword inside a conditional statement, and handle the reading error or end-of-file indicator by triggering a break statement to exit the main processing loop.
+              behavior_id: handle-exit-command
+              reveal_after_attempts: 4
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-3-handle-exit-command
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-handle-exit-command-normal-keyword
+              description: Verify that inputting the termination command successfully stops the session.
+              expected_behavior: The execution loop terminates cleanly without error outputs.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                exit
+              expected: ""
+              matcher: trim
+            - name: test-handle-exit-command-edge-eof
+              description: Verify that sending an end-of-file condition closes the session correctly.
+              expected_behavior: The session detects the end of the input stream and exits.
+              kind: predefined
+              run_on: test_and_submit
+              expected: ""
+              matcher: trim
+            - name: test-handle-exit-command-dynamic-fuzz
+              description: Ensure resilience against varied termination inputs and whitespace.
+              expected_behavior: The system correctly interprets valid termination triggers under varied padding.
+              kind: dynamic_oracle
+              run_on: submit_only
+              stdin: "   exit   \n"
+              expected: ""
+              matcher: trim
+        test_ids:
+            - test-handle-exit-command-normal-keyword
+            - test-handle-exit-command-edge-eof
+            - test-handle-exit-command-dynamic-fuzz
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"strings"
+                )
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	for {
+                		line, err := reader.ReadString('\n')
+                		if err != nil {
+                			break
+                		}
+                		cmd := strings.TrimSpace(line)
+                		if cmd == "exit" {
+                			break
+                		}
+                		if cmd != "" {
+                			fmt.Println(cmd)
+                		}
+                	}
+                }
+    - id: level-tokenize-input-string
+      order: 4
+      milestone_id: command-parsing
+      title: Tokenize Input String
+      goal: Split a raw user input string into whitespace-separated argument tokens.
+      narrative:
+        hook: Your shell can successfully read a line of text typed by the user, but it still treats the entire line as a single monolithic block of text rather than separate instructions.
+        motivation: To execute commands and pass flags correctly, the shell needs a way to dissect raw input strings into distinct words or arguments so each piece can be analyzed independently.
+        concrete_demo: When a user types a multi-word command line into the interactive prompt, the shell isolates the individual words into an orderly sequence of distinct components for future processing.
+      difficulty: easy
+      learning_objectives:
+        - Understand how to partition a continuous string into discrete components based on whitespace boundaries.
+        - Represent a sequence of textual arguments as a collection of separate string tokens.
+      constraints:
+        - Do not implement command execution or process spawning yet.
+        - Do not handle quoted strings containing spaces in this level.
+        - Rely solely on standard whitespace character boundaries for splitting.
+      deliverables:
+        - A routine or function that takes a raw input string and returns a collection of distinct argument tokens.
+      behaviors:
+        - id: tokenize-input-string
+          description: Splits raw user input strings into individual whitespace-separated argument tokens.
+      tests:
+        - id: test-tokenize-normal-whitespace
+          behavior_ids:
+            - tokenize-input-string
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify that a standard input string with multiple words is correctly separated into individual tokens.
+          expected_behavior: The input string is broken down into a sequence of distinct tokens separated by spaces.
+          io:
+            stdin: |
+                command arg1 arg2
+            expected: '["command", "arg1", "arg2"]'
+            matcher: json_equal
+        - id: test-tokenize-edge-extra-whitespace
+          behavior_ids:
+            - tokenize-input-string
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify that leading, trailing, and multiple consecutive whitespace characters do not produce empty tokens.
+          expected_behavior: Excessive or boundary whitespace is trimmed or ignored, leaving only meaningful argument tokens.
+          io:
+            stdin: "   run    fast   \n"
+            expected: '["run", "fast"]'
+            matcher: json_equal
+        - id: test-tokenize-edge-empty-input
+          behavior_ids:
+            - tokenize-input-string
+          category: unit
+          case_type: edge
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Verify the behavior when the provided input string contains only whitespace or is completely empty.
+          expected_behavior: An empty or whitespace-only input results in a zero-length collection of tokens.
+          io:
+            stdin: "   \n"
+            expected: '[]'
+            matcher: json_equal
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Examine standard string manipulation utilities available in the standard library for splitting text.
+            - Consider how whitespace characters dictate the boundaries between individual argument tokens.
+        hints:
+            - id: hint-tokenize-input-string-1
+              order: 1
+              type: conceptual
+              content: Think about how sentences are read word by word. When scanning text, you look for spaces or tabs that act as natural separators between individual words, allowing you to collect each word into a separate bucket.
+              behavior_id: tokenize-input-string
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-tokenize-input-string-2
+              order: 2
+              type: directional
+              content: Look for built-in string manipulation functions in your target language's standard library that specialize in cutting a continuous text string into slices based on whitespace patterns.
+              behavior_id: tokenize-input-string
+              reveal_after_attempts: 4
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-tokenize-input-string
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-tokenize-normal-whitespace
+              description: Verify that a standard input string with multiple words is correctly separated into individual tokens.
+              expected_behavior: The input string is broken down into a sequence of distinct tokens separated by spaces.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                command arg1 arg2
+              expected: '["command", "arg1", "arg2"]'
+              matcher: json_equal
+            - name: test-tokenize-edge-extra-whitespace
+              description: Verify that leading, trailing, and multiple consecutive whitespace characters do not produce empty tokens.
+              expected_behavior: Excessive or boundary whitespace is trimmed or ignored, leaving only meaningful argument tokens.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: "   run    fast   \n"
+              expected: '["run", "fast"]'
+              matcher: json_equal
+            - name: test-tokenize-edge-empty-input
+              description: Verify the behavior when the provided input string contains only whitespace or is completely empty.
+              expected_behavior: An empty or whitespace-only input results in a zero-length collection of tokens.
+              kind: dynamic_oracle
+              run_on: submit_only
+              stdin: "   \n"
+              expected: '[]'
+              matcher: json_equal
+        test_ids:
+            - test-tokenize-normal-whitespace
+            - test-tokenize-edge-extra-whitespace
+            - test-tokenize-edge-empty-input
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import (
+                	"bufio"
+                	"encoding/json"
+                	"fmt"
+                	"os"
+                	"strings"
+                )
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	line, err := reader.ReadString('\n')
+                	if err != nil && line == "" {
+                		fmt.Println("[]")
+                		return
+                	}
+                	line = strings.TrimSpace(line)
+                	var tokens []string
+                	if line != "" {
+                		tokens = strings.Fields(line)
+                	}
+                	if tokens == nil {
+                		tokens = []string{}
+                	}
+                	data, _ := json.Marshal(tokens)
+                	fmt.Println(string(data))
+                }
+    - id: level-5-command-parsing
+      order: 5
+      milestone_id: command-parsing
+      title: Handle Quoted Arguments
+      goal: Support quoted strings as single arguments containing whitespace.
+      narrative:
+        hook: Your shell successfully breaks input strings apart by whitespace, but it treats spaces inside file names or messages as hard boundaries.
+        motivation: Without recognizing quotes, users cannot pass paths or messages containing spaces, limiting the utility of commands.
+        concrete_demo: When a user provides a phrase enclosed in matching quote characters, the system groups those words together into a single parameter instead of fracturing them into multiple distinct tokens.
+      difficulty: medium
+      learning_objectives:
+        - Recognize single and double quotes during tokenization
+        - Group whitespace-separated terms enclosed in quotes into a single argument
+        - Strip surrounding quote characters from final argument tokens
+      constraints:
+        - Do not split tokens by spaces if they occur inside matching quotes
+        - Ensure unquoted arguments continue to split normally by whitespace
+        - Maintain the exact order of resulting arguments
+      deliverables:
+        - An updated tokenization routine capable of handling quoted substrings
+        - Unit tests verifying single, double, and mixed quote scenarios
+      behaviors:
+        - id: handle-quoted-arguments
+          description: The system correctly parses quoted substrings containing spaces as single distinct arguments while stripping the surrounding quote markers.
+      tests:
+        - id: test-handle-quotes-normal-single
+          behavior_ids:
+            - handle-quoted-arguments
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies that single quotes group words with spaces into a single token.
+          expected_behavior: The input string containing single-quoted sections produces a unified argument without outer quotes.
+          io:
+            stdin: |
+                arg1 'hello world' arg3
+            expected: |
+                arg1
+                hello world
+                arg3
+            matcher: exact
+        - id: test-handle-quotes-normal-double
+          behavior_ids:
+            - handle-quoted-arguments
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies that double quotes group words with spaces into a single token.
+          expected_behavior: The input string containing double-quoted sections produces a unified argument without outer quotes.
+          io:
+            stdin: |
+                cmd "file name with spaces.txt"
+            expected: |
+                cmd
+                file name with spaces.txt
+            matcher: exact
+        - id: test-handle-quotes-edge-empty
+          behavior_ids:
+            - handle-quoted-arguments
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies handling of empty quoted strings within the input stream.
+          expected_behavior: Empty quotes result in an empty argument token rather than disappearing entirely.
+          io:
+            stdin: |
+                arg1 "" arg3
+            expected: |
+                arg1
+
+                arg3
+            matcher: exact
+        - id: test-handle-quotes-dynamic-mixed
+          behavior_ids:
+            - handle-quoted-arguments
+          category: functional
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Verifies correct behavior with a combination of unquoted, single-quoted, and double-quoted parameters.
+          expected_behavior: All argument boundaries are correctly identified regardless of quote types.
+          io:
+            stdin: |
+                echo hello 'wide world' "from program"
+            expected: |
+                echo
+                hello
+                wide world
+                from program
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Iterate through the character stream while tracking whether you are currently inside a quoted region.
+            - Toggle your quoted state when encountering quote characters, and suppress adding the quote characters themselves to the final token buffer.
+        hints:
+            - id: hint-handle-quoted-arguments-1
+              order: 1
+              type: conceptual
+              content: Think about how text processing requires maintaining state regarding whether space characters should act as separators or be treated as ordinary characters inside a quotation.
+              behavior_id: handle-quoted-arguments
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-handle-quoted-arguments-2
+              order: 2
+              type: directional
+              content: Consider using a boolean flag to track quote state as you process the input character by character or rune by rune.
+              behavior_id: handle-quoted-arguments
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-handle-quoted-arguments-3
+              order: 3
+              type: structural
+              content: Design a parsing loop that accumulates characters into the current token until a whitespace occurs outside of quotes, or until a closing quote is reached.
+              behavior_id: handle-quoted-arguments
+              reveal_after_attempts: 6
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-5-command-parsing
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-handle-quotes-normal-single
+              description: Verifies that single quotes group words with spaces into a single token.
+              expected_behavior: The input string containing single-quoted sections produces a unified argument without outer quotes.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                arg1 'hello world' arg3
+              expected: |
+                arg1
+                hello world
+                arg3
+              matcher: exact
+            - name: test-handle-quotes-normal-double
+              description: Verifies that double quotes group words with spaces into a single token.
+              expected_behavior: The input string containing double-quoted sections produces a unified argument without outer quotes.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                cmd "file name with spaces.txt"
+              expected: |
+                cmd
+                file name with spaces.txt
+              matcher: exact
+            - name: test-handle-quotes-edge-empty
+              description: Verifies handling of empty quoted strings within the input stream.
+              expected_behavior: Empty quotes result in an empty argument token rather than disappearing entirely.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                arg1 "" arg3
+              expected: |
+                arg1
+
+                arg3
+              matcher: exact
+            - name: test-handle-quotes-dynamic-mixed
+              description: Verifies correct behavior with a combination of unquoted, single-quoted, and double-quoted parameters.
+              expected_behavior: All argument boundaries are correctly identified regardless of quote types.
+              kind: dynamic_oracle
+              run_on: submit_only
+              stdin: |
+                echo hello 'wide world' "from program"
+              expected: |
+                echo
+                hello
+                wide world
+                from program
+              matcher: exact
+        test_ids:
+            - test-handle-quotes-normal-single
+            - test-handle-quotes-normal-double
+            - test-handle-quotes-edge-empty
+            - test-handle-quotes-dynamic-mixed
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"strings"
+                )
+
+                func parseArgs(input string) []string {
+                	var args []string
+                	var current strings.Builder
+                	inQuote := false
+                	var quoteChar rune
+                	
+                	runnes := []rune(input)
+                	for i := 0; i < len(runnes); i++ {
+                		r := runnes[i]
+                		if inQuote {
+                			if r == quoteChar {
+                				inQuote = false
+                			} else {
+                				current.WriteRune(r)
+                			}
+                		} else {
+                			if r == '\'' || r == '"' {
+                				inQuote = true
+                				quoteChar = r
+                			} else if r == ' ' || r == '\t' || r == '\r' || r == '\n' {
+                				if current.Len() > 0 {
+                					args = append(args, current.String())
+                					current.Reset()
+                				}
+                			} else {
+                				current.WriteRune(r)
+                			}
+                		}
+                	}
+                	if current.Len() > 0 || inQuote {
+                		args = append(args, current.String())
+                	}
+                	return args
+                }
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	for {
+                		line, err := reader.ReadString('\n')
+                		if len(line) == 0 && err != nil {
+                			break
+                		}
+                		line = strings.TrimSuffix(line, "\n")
+                		line = strings.TrimSuffix(line, "\r")
+                		if line == "" && err != nil {
+                			break
+                		}
+                		
+                		args := parseArgs(line)
+                		for _, arg := range args {
+                			fmt.Println(arg)
+                		}
+                		if err != nil {
+                			break
+                		}
+                	}
+                }
+    - id: level-6-process-execution
+      order: 6
+      milestone_id: process-execution
+      title: Spawn Child Process
+      goal: Execute external commands using system binaries and passed arguments.
+      narrative:
+        hook: Our shell can successfully display prompts, read user input, handle exit commands, and parse complex quoted arguments into structured tokens. However, it still cannot actually invoke any external operating system programs or run system binaries.
+        motivation: Without the ability to spawn separate child processes, an interactive command interpreter remains an isolated text parser unable to leverage system utilities. This step bridges our parsed token stream directly to the underlying operating system execution facilities.
+        concrete_demo: When an operator provides an executable name alongside required parameters, the system initiates the requested binary as a distinct child process. This transforms our shell from a static text processor into a functional interface capable of triggering external tools.
+      difficulty: easy
+      learning_objectives:
+        - Understand how an operating system invokes a separate external executable from a parent program.
+        - Pass a command name and argument list to the process creation runtime interface.
+      constraints:
+        - Do not implement process completion waiting mechanisms in this level.
+        - Do not implement error handling for command-not-found failures in this level.
+      deliverables:
+        - A function or routine that accepts a binary name and arguments, and initiates a child process execution.
+      behaviors:
+        - id: spawn-child-process
+          description: Spawns an external system process using the provided command and arguments.
+      tests:
+        - id: test-spawn-child-normal
+          behavior_ids:
+            - spawn-child-process
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies that a basic external binary is successfully requested for execution with arguments.
+          expected_behavior: The runtime successfully initiates the requested external process without returning an immediate invocation error.
+          io:
+            args:
+                - echo
+                - hello
+            expected: success
+            matcher: exact
+        - id: test-spawn-child-edge
+          behavior_ids:
+            - spawn-child-process
+          category: functional
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies behavior when spawning a command with an empty or minimal argument list.
+          expected_behavior: The system processes the invocation request correctly even when no additional arguments are supplied.
+          io:
+            args:
+                - "true"
+            expected: success
+            matcher: exact
+        - id: test-spawn-child-oracle
+          behavior_ids:
+            - spawn-child-process
+          category: integration
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Fuzzed verification of process spawn invocation parameters against structural assumptions.
+          expected_behavior: The process launcher correctly handles varied argument combinations during initiation.
+          io:
+            args:
+                - printf
+                - test
+            expected: success
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Utilize the standard system process creation API provided by the runtime environment.
+            - Separate the executable name from its parameter slice before invoking the process launcher.
+        hints:
+            - id: hint-spawn-child-process-1
+              order: 1
+              type: conceptual
+              content: Operating systems maintain a distinction between the current program and external binaries stored on disk. To run an external program, the parent application must issue a system request specifying the target executable along with any configuration parameters.
+              behavior_id: spawn-child-process
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-spawn-child-process-2
+              order: 2
+              type: directional
+              content: Look for standard runtime library functions dedicated to command execution. You will want to pass your first token as the command identifier and any subsequent tokens as the argument parameters.
+              behavior_id: spawn-child-process
+              reveal_after_attempts: 4
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-6-process-execution
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-spawn-child-normal
+              description: Verifies that a basic external binary is successfully requested for execution with arguments.
+              expected_behavior: The runtime successfully initiates the requested external process without returning an immediate invocation error.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - echo
+                - hello
+              expected: success
+              matcher: exact
+            - name: test-spawn-child-edge
+              description: Verifies behavior when spawning a command with an empty or minimal argument list.
+              expected_behavior: The system processes the invocation request correctly even when no additional arguments are supplied.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - "true"
+              expected: success
+              matcher: exact
+            - name: test-spawn-child-oracle
+              description: Fuzzed verification of process spawn invocation parameters against structural assumptions.
+              expected_behavior: The process launcher correctly handles varied argument combinations during initiation.
+              kind: dynamic_oracle
+              run_on: submit_only
+              args:
+                - printf
+                - test
+              expected: success
+              matcher: exact
+        test_ids:
+            - test-spawn-child-normal
+            - test-spawn-child-edge
+            - test-spawn-child-oracle
+      reference_solution:
+        language: go
+        files:
+            main.go: |
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"os/exec"
+                	"strings"
+                )
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	for {
+                		fmt.Print("> ")
+                		input, err := reader.ReadString('\n')
+                		if err != nil {
+                			break
+                		}
+                		input = strings.TrimSpace(input)
+                		if input == "" {
+                			continue
+                		}
+                		if input == "exit" {
+                			break
+                		}
+
+                		parts := strings.Fields(input)
+                		cmdName := parts[0]
+                		var args []string
+                		if len(parts) > 1 {
+                			args = parts[1:]
+                		}
+
+                		cmd := exec.Command(cmdName, args...)
+                		cmd.Stdout = os.Stdout
+                		cmd.Stderr = os.Stderr
+                		cmd.Stdin = os.Stdin
+
+                		err = cmd.Run()
+                		if err != nil {
+                			fmt.Printf("error: %v\n", err)
+                		} else {
+                			fmt.Println("success")
+                		}
+                	}
+                }
+    - id: level-wait-for-process-completion
+      order: 7
+      milestone_id: process-execution
+      title: Wait for Process Completion
+      goal: Block the shell until the spawned child process finishes execution.
+      narrative:
+        hook: Previously, our shell could successfully launch external commands as child processes, but it immediately raced ahead without waiting for them to finish.
+        motivation: Without process synchronization, commands overlap chaotically, making interactive shell usage unpredictable and impossible to manage.
+        concrete_demo: When executing a command that takes a moment to run, the shell now patiently pauses all further input handling until the external program completely finishes its work.
+      difficulty: medium
+      learning_objectives:
+        - Understand synchronous execution and process synchronization.
+        - Learn how parent processes block while waiting for child process termination.
+        - Observe exit status collection after child process completion.
+      constraints:
+        - Do not return control to the prompt before the child process terminates.
+        - Ensure child process execution results are properly handled.
+        - Do not introduce asynchronous execution loops.
+      deliverables:
+        - A mechanism that pauses shell execution until the active child process exits.
+        - Proper handling of process termination signals or status codes.
+      behaviors:
+        - id: wait-for-process-completion
+          description: The shell blocks and waits for the spawned child process to finish before accepting new input.
+      tests:
+        - id: test-wait-process-normal-1
+          behavior_ids:
+            - wait-for-process-completion
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies that executing a short-lived external utility blocks the shell until completion.
+          expected_behavior: The shell pauses execution until the external command exits successfully.
+          io:
+            args:
+                - echo
+                - completed
+            expected: completed
+            matcher: exact
+        - id: test-wait-process-normal-2
+          behavior_ids:
+            - wait-for-process-completion
+          category: integration
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies correct synchronization when running sequential commands.
+          expected_behavior: Each command runs to completion before the shell proceeds.
+          io:
+            args:
+                - printf
+                - line1\nline2
+            expected: |-
+                line1
+                line2
+            matcher: exact
+        - id: test-wait-process-edge-1
+          behavior_ids:
+            - wait-for-process-completion
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies synchronization behavior when handling empty or minimal output execution.
+          expected_behavior: The shell waits for the process even when standard output is empty.
+          io:
+            args:
+                - "true"
+            expected: ""
+            matcher: exact
+        - id: test-wait-process-oracle-1
+          behavior_ids:
+            - wait-for-process-completion
+          category: functional
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Fuzzed verification of process completion waiting behavior.
+          expected_behavior: Shell correctly blocks and captures termination status for variable workload utilities.
+          io:
+            args:
+                - echo
+                - oracle_ok
+            expected: oracle_ok
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - After spawning the child process handle, invoke the runtime wait operation on that handle.
+            - Capture any returned exit status or error indicators to ensure the child process finished cleanly.
+        hints:
+            - id: hint-wait-for-process-completion-1
+              order: 1
+              type: conceptual
+              content: When a parent process spawns a child, the operating system keeps track of the child's lifecycle. The parent must explicitly request to block execution until the child's state changes to terminated.
+              behavior_id: wait-for-process-completion
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-wait-for-process-completion-2
+              order: 2
+              type: directional
+              content: Look for the method or function associated with the process handle that blocks until the underlying operating system process finishes execution.
+              behavior_id: wait-for-process-completion
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-wait-for-process-completion-3
+              order: 3
+              type: structural
+              content: Invoke the blocking call immediately after starting the command structure, checking its return values to ensure the command finished successfully.
+              behavior_id: wait-for-process-completion
+              reveal_after_attempts: 6
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-wait-for-process-completion
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-wait-process-normal-1
+              description: Verifies that executing a short-lived external utility blocks the shell until completion.
+              expected_behavior: The shell pauses execution until the external command exits successfully.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - echo
+                - completed
+              expected: completed
+              matcher: exact
+            - name: test-wait-process-normal-2
+              description: Verifies correct synchronization when running sequential commands.
+              expected_behavior: Each command runs to completion before the shell proceeds.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - printf
+                - line1\nline2
+              expected: |-
+                line1
+                line2
+              matcher: exact
+            - name: test-wait-process-edge-1
+              description: Verifies synchronization behavior when handling empty or minimal output execution.
+              expected_behavior: The shell waits for the process even when standard output is empty.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - "true"
+              expected: ""
+              matcher: exact
+            - name: test-wait-process-oracle-1
+              description: Fuzzed verification of process completion waiting behavior.
+              expected_behavior: Shell correctly blocks and captures termination status for variable workload utilities.
+              kind: dynamic_oracle
+              run_on: submit_only
+              args:
+                - echo
+                - oracle_ok
+              expected: oracle_ok
+              matcher: exact
+        test_ids:
+            - test-wait-process-normal-1
+            - test-wait-process-normal-2
+            - test-wait-process-edge-1
+            - test-wait-process-oracle-1
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"os/exec"
+                	"strings"
+                )
+
+                func main() {
+                	args := os.Args[1:]
+                	if len(args) == 0 {
+                		reader := bufio.NewReader(os.Stdin)
+                		for {
+                			fmt.Print("> ")
+                			text, err := reader.ReadString('\n')
+                			if err != nil {
+                				break
+                			}
+                			text = strings.TrimSpace(text)
+                			if text == "" {
+                				continue
+                			}
+                			if text == "exit" {
+                				break
+                			}
+                			cmdParts := strings.Fields(text)
+                			cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
+                			cmd.Stdout = os.Stdout
+                			cmd.Stderr = os.Stderr
+                			err = cmd.Run()
+                			if err != nil {
+                				// ignore error for simplicity
+                			}
+                		}
+                	} else {
+                		cmd := exec.Command(args[0], args[1:]...)
+                		cmd.Stdout = os.Stdout
+                		cmd.Stderr = os.Stderr
+                		err := cmd.Run()
+                		if err != nil {
+                			os.Exit(1)
+                		}
+                	}
+                }
+    - id: level-8
+      order: 8
+      milestone_id: process-execution
+      title: Handle Execution Errors
+      goal: Gracefully handle command-not-found and execution failures without crashing.
+      narrative:
+        hook: Your shell can successfully spawn and wait for child processes, but typing a non-existent command causes it to crash abruptly.
+        motivation: A robust interactive environment must protect itself against user typos and missing binaries instead of terminating unexpectedly.
+        concrete_demo: When an invalid program name is provided by the user, the application prints a clear diagnostic message and immediately displays a fresh prompt ready for the next instruction.
+      difficulty: hard
+      learning_objectives:
+        - Detect when an external command fails to execute or cannot be found.
+        - Report execution errors cleanly to the standard error stream.
+        - Ensure the shell process continues running despite invalid commands.
+      constraints:
+        - Do not terminate the shell when encountering invalid commands.
+        - Output informative messages for missing or failing programs.
+        - Preserve previous process spawning and waiting capabilities.
+      deliverables:
+        - Error handling logic for failed child process execution.
+        - Integration tests verifying resilient shell behavior.
+      behaviors:
+        - id: handle-execution-errors
+          description: Intercept execution failures and report them cleanly without terminating the parent process.
+      tests:
+        - id: test-handle-errors-normal-1
+          behavior_ids:
+            - handle-execution-errors
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify the shell reports an error and stays active when given a non-existent command.
+          expected_behavior: The shell should output an error message to standard error and continue running.
+          io:
+            stdin: |
+                nonexistentcommand12345
+                exit
+            expected: command not found
+            matcher: trim
+        - id: test-handle-errors-normal-2
+          behavior_ids:
+            - handle-execution-errors
+          category: integration
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify the shell can execute valid commands after encountering a failed command.
+          expected_behavior: Subsequent valid commands execute successfully after an error.
+          io:
+            stdin: |
+                badcommand
+                echo hello
+                exit
+            expected: hello
+            matcher: trim
+        - id: test-handle-errors-edge-1
+          behavior_ids:
+            - handle-execution-errors
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify empty command inputs do not trigger fatal execution faults.
+          expected_behavior: The shell handles empty or whitespace-only execution requests safely.
+          io:
+            stdin: "   \nexit\n"
+            expected: ""
+            matcher: exact
+        - id: test-handle-errors-oracle-1
+          behavior_ids:
+            - handle-execution-errors
+          category: functional
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Verify random invalid inputs trigger resilient handling under dynamic evaluation.
+          expected_behavior: Arbitrary non-existent commands are caught and reported cleanly.
+          io:
+            stdin: |
+                randombadinputxyz
+                exit
+            expected: command not found
+            matcher: trim
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Inspect the result returned when launching or waiting on the child process.
+            - Check for system-level errors indicating that the binary could not be found or executed.
+            - Write the error message to standard error rather than standard output.
+        hints:
+            - id: hint-handle-execution-errors-1
+              order: 1
+              type: conceptual
+              content: Consider what happens in an operating system when you request execution of a program that does not exist on disk.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-handle-execution-errors-2
+              order: 2
+              type: directional
+              content: Check the return values of the process invocation step to determine if an error occurred before attempting to wait.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-handle-execution-errors-3
+              order: 3
+              type: structural
+              content: Use conditional statements to branch your logic depending on whether the execution returned a non-nil error object.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 6
+              spoiler_risk: false
+            - id: hint-handle-execution-errors-4
+              order: 4
+              type: partial_impl
+              content: |-
+                if err != nil {
+                    fmt.Fprintln(os.Stderr, "error:", err)
+                    // continue prompt loop
+                }
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 8
+              spoiler_risk: true
+            - id: hint-handle-execution-errors-5
+              order: 5
+              type: near_solution
+              content: Capture the error from the process starter, print it appropriately to standard error, and ensure your main command loop does not break out of execution.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 10
+              spoiler_risk: true
+      agnostic_test_spec:
+        level_id: level-8
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-handle-errors-normal-1
+              description: Verify the shell reports an error and stays active when given a non-existent command.
+              expected_behavior: The shell should output an error message to standard error and continue running.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                nonexistentcommand12345
+                exit
+              expected: command not found
+              matcher: trim
+            - name: test-handle-errors-normal-2
+              description: Verify the shell can execute valid commands after encountering a failed command.
+              expected_behavior: Subsequent valid commands execute successfully after an error.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                badcommand
+                echo hello
+                exit
+              expected: hello
+              matcher: trim
+            - name: test-handle-errors-edge-1
+              description: Verify empty command inputs do not trigger fatal execution faults.
+              expected_behavior: The shell handles empty or whitespace-only execution requests safely.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: "   \nexit\n"
+              expected: ""
+              matcher: exact
+            - name: test-handle-errors-oracle-1
+              description: Verify random invalid inputs trigger resilient handling under dynamic evaluation.
+              expected_behavior: Arbitrary non-existent commands are caught and reported cleanly.
+              kind: dynamic_oracle
+              run_on: submit_only
+              stdin: |
+                randombadinputxyz
+                exit
+              expected: command not found
+              matcher: trim
+        test_ids:
+            - test-handle-errors-normal-1
+            - test-handle-errors-normal-2
+            - test-handle-errors-edge-1
+            - test-handle-errors-oracle-1
+      reference_solution:
+        language: go
+        files:
+            main.go: "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\" \n\t\"os\"\n\t\"os/exec\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tfmt.Print(\"> \")\n\t\tline, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\n\t\tline = strings.TrimSpace(line)\n\t\tif line == \"\" {\n\t\t\tcontinue\n\t\t}\n\n\t\tif line == \"exit\" {\n\t\t\tbreak\n\t\t}\n\n\t\targs := strings.Fields(line)\n\t\tif len(args) == 0 {\n\t\t\tcontinue\n\t\t}\n\n\t\tcmd := exec.Command(args[0], args[1:]...)\n\t\tcmd.Stdout = os.Stdout\n\t\tcmd.Stderr = os.Stderr\n\n\t\terr = cmd.Run()\n\t\tif err != nil {\n\t\t\tfmt.Printf(\"%s: command not found\\n\", args[0])\n\t\t}\n\t}\n}"
+    - id: level-implement-cd-command
+      order: 9
+      milestone_id: built-in-commands
+      title: Implement CD Command
+      goal: Change the current working directory of premium shell process directly.
+      narrative:
+        hook: Your shell can execute external programs and wait for them to finish, but every command runs inside its own isolated child process.
+        motivation: If you try to change directories using an external program, only that temporary child process updates its location while your main shell stays completely stationary.
+        concrete_demo: Typing a directory-navigation instruction needs to update the active environment of your main process so that subsequent inputs execute inside the newly selected folder.
+      difficulty: easy
+      learning_objectives:
+        - Understand how a process maintains its working directory as part of its execution state.
+        - Recognize why directory-changing instructions must be handled internally instead of spawning external binaries.
+        - Learn how to invoke the system facility that updates the current working directory.
+      constraints:
+        - Must not spawn an external child process for the directory change instruction.
+        - Must modify the execution state of the current shell process directly.
+        - Must handle standard path arguments correctly.
+      deliverables:
+        - An internal directory-updating routine that modifies the current working directory state.
+      behaviors:
+        - id: implement-cd-command
+          description: The shell intercepts directory-change instructions and updates its working directory state directly.
+      tests:
+        - id: test-implement-cd-normal
+          behavior_ids:
+            - implement-cd-command
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies that supplying a valid target path updates the working directory successfully.
+          expected_behavior: The directory updates correctly without spawning external tools.
+          io:
+            args:
+                - cd
+                - /tmp
+            expected: ""
+            matcher: exact
+        - id: test-implement-cd-edge
+          behavior_ids:
+            - implement-cd-command
+          category: functional
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies behavior when supplying an invalid or nonexistent target path.
+          expected_behavior: The directory remains unchanged and an error indicator is reported.
+          io:
+            args:
+                - cd
+                - /nonexistent-directory-xyz
+            expected: error
+            matcher: trim
+        - id: test-implement-cd-oracle
+          behavior_ids:
+            - implement-cd-command
+          category: integration
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Dynamic verification of directory navigation across multiple sequential steps.
+          expected_behavior: Sequential path changes update state accurately.
+          io:
+            args:
+                - cd
+                - .
+            expected: ""
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Check whether the requested instruction matches the directory-change identifier.
+            - Retrieve the target path parameter passed alongside the instruction.
+            - Invoke the standard runtime facility responsible for updating the current working directory.
+        hints:
+            - id: hint-implement-cd-command-1
+              order: 1
+              type: conceptual
+              content: Remember that a process working directory is a state attribute of the running program itself. External tools cannot modify the parent process state.
+              behavior_id: implement-cd-command
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-implement-cd-command-2
+              order: 2
+              type: directional
+              content: Look for operating system APIs or standard library functions designed to modify the working directory and handle any returned status errors.
+              behavior_id: implement-cd-command
+              reveal_after_attempts: 4
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-implement-cd-command
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-implement-cd-normal
+              description: Verifies that supplying a valid target path updates the working directory successfully.
+              expected_behavior: The directory updates correctly without spawning external tools.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - cd
+                - /tmp
+              expected: ""
+              matcher: exact
+            - name: test-implement-cd-edge
+              description: Verifies behavior when supplying an invalid or nonexistent target path.
+              expected_behavior: The directory remains unchanged and an error indicator is reported.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - cd
+                - /nonexistent-directory-xyz
+              expected: error
+              matcher: trim
+            - name: test-implement-cd-oracle
+              description: Dynamic verification of directory navigation across multiple sequential steps.
+              expected_behavior: Sequential path changes update state accurately.
+              kind: dynamic_oracle
+              run_on: submit_only
+              args:
+                - cd
+                - .
+              expected: ""
+              matcher: exact
+        test_ids:
+            - test-implement-cd-normal
+            - test-implement-cd-edge
+            - test-implement-cd-oracle
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"path/filepath"
+                	"strings"
+                )
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	for {
+                		fmt.Print("$ ")
+                		line, err := reader.ReadString('\n')
+                		if err != nil {
+                			break
+                		}
+                		line = strings.TrimSpace(line)
+                		if line == "" {
+                			continue
+                		}
+
+                		args := strings.Fields(line)
+                		cmd := args[0]
+
+                		switch cmd {
+                		case "exit":
+                			return
+                		case "cd":
+                			var targetDir string
+                			if len(args) < 2 {
+                				home, err := os.UserHomeDir()
+                				if err != nil {
+                					fmt.Fprintln(os.Stderr, "error")
+                					continue
+                				}
+                				targetDir = home
+                			} else {
+                				targetDir = args[1]
+                			}
+
+                			err := os.Chdir(targetDir)
+                			if err != nil {
+                				fmt.Fprintln(os.Stderr, "error")
+                			}
+                		case "pwd":
+                			dir, err := os.Getwd()
+                			if err != nil {
+                				fmt.Fprintln(os.Stderr, "error")
+                			} else {
+                				fmt.Println(dir)
+                			}
+                		default:
+                			fmt.Printf("%s: command not found\n", cmd)
+                		}
+                	}
+                }
+    - id: level-10-built-in-commands
+      order: 10
+      milestone_id: built-in-commands
+      title: Dispatch Built-ins
+      goal: Route recognized command names to built-in handlers instead of external execution.
+      narrative:
+        hook: Your environment can successfully tokenize inputs and launch external system processes, but every single command is currently treated as an external binary lookup.
+        motivation: Executing internal state modifications through external processes is inefficient and fails to alter the persistent shell environment. Intercepting specific commands directly allows the shell to manage its own operations cleanly.
+        concrete_demo: When a user types a recognized control word, the shell intercepts it internally and performs the required action directly, bypassing external process creation entirely.
+      difficulty: medium
+      learning_objectives:
+        - Understand how to intercept specific command names before initiating external process lookups.
+        - Design a routing mechanism to check input tokens against a set of internal command names.
+        - Ensure unmatched commands correctly fall through to external process execution paths.
+      constraints:
+        - Must verify command names against registered built-in identifiers prior to any system execution calls.
+        - Must preserve all existing input tokenization and parsing behavior from previous levels.
+        - Must remain completely language-agnostic in all shared definitions.
+      deliverables:
+        - A command router module that intercepts known built-in names.
+        - Integration of the router within the main execution loop to branch between internal handlers and external processes.
+      behaviors:
+        - id: dispatch-builtins
+          description: Examine parsed command tokens and dispatch recognized identifiers to internal handlers instead of launching external processes.
+      tests:
+        - id: test-dispatch-builtins-normal-1
+          behavior_ids:
+            - dispatch-builtins
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify normal routing of a recognized internal command.
+          expected_behavior: The system intercepts the command and executes the internal handler.
+          io:
+            stdin: |
+                builtin_command
+            expected: internal_handled
+            matcher: exact
+        - id: test-dispatch-builtins-fallback-1
+          behavior_ids:
+            - dispatch-builtins
+            - spawn-child-process
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify fallback behavior for unrecognized command names.
+          expected_behavior: Unrecognized commands bypass the router and attempt external process execution.
+          io:
+            stdin: |
+                external_command
+            expected: external_executed
+            matcher: exact
+        - id: test-dispatch-builtins-edge-1
+          behavior_ids:
+            - dispatch-builtins
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verify handling of empty or blank input lines during routing evaluation.
+          expected_behavior: Empty input strings are safely ignored without triggering errors or false matches.
+          io:
+            stdin: |4+
+            expected: ""
+            matcher: exact
+        - id: test-dispatch-builtins-oracle-1
+          behavior_ids:
+            - dispatch-builtins
+          category: integration
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Verify dynamic routing consistency across varied input sequences.
+          expected_behavior: The command router correctly distinguishes internal commands from external binaries across randomized execution sequences.
+          io:
+            stdin: |
+                builtin_command
+                external_command
+            expected: oracle_verified
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Examine the first element of the parsed argument tokens before attempting any external process spawn calls.
+            - Maintain a lookup mechanism or conditional check to match the command name against known built-in identifiers.
+            - If a match is found, invoke the corresponding internal function; otherwise, proceed with the standard external execution pipeline.
+        hints:
+            - id: hint-dispatch-builtins-1
+              order: 1
+              type: conceptual
+              content: Think about how you can intercept a command before it reaches the external process execution stage by checking the command name against a predefined set of known names.
+              behavior_id: dispatch-builtins
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-dispatch-builtins-2
+              order: 2
+              type: directional
+              content: Consider adding a conditional branch right after tokenizing input to check if the primary token matches any internal command identifier.
+              behavior_id: dispatch-builtins
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-dispatch-builtins-3
+              order: 3
+              type: structural
+              content: Implement a dedicated routing function that accepts the tokenized arguments, inspects the command name, and returns a boolean or status indicating whether an internal handler was executed.
+              behavior_id: dispatch-builtins
+              reveal_after_attempts: 6
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-10-built-in-commands
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-dispatch-builtins-normal-1
+              description: Verify normal routing of a recognized internal command.
+              expected_behavior: The system intercepts the command and executes the internal handler.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                builtin_command
+              expected: internal_handled
+              matcher: exact
+            - name: test-dispatch-builtins-fallback-1
+              description: Verify fallback behavior for unrecognized command names.
+              expected_behavior: Unrecognized commands bypass the router and attempt external process execution.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                external_command
+              expected: external_executed
+              matcher: exact
+            - name: test-dispatch-builtins-edge-1
+              description: Verify handling of empty or blank input lines during routing evaluation.
+              expected_behavior: Empty input strings are safely ignored without triggering errors or false matches.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |4+
+              expected: ""
+              matcher: exact
+            - name: test-dispatch-builtins-oracle-1
+              description: Verify dynamic routing consistency across varied input sequences.
+              expected_behavior: The command router correctly distinguishes internal commands from external binaries across randomized execution sequences.
+              kind: dynamic_oracle
+              run_on: submit_only
+              stdin: |
+                builtin_command
+                external_command
+              expected: oracle_verified
+              matcher: exact
+        test_ids:
+            - test-dispatch-builtins-normal-1
+            - test-dispatch-builtins-fallback-1
+            - test-dispatch-builtins-edge-1
+            - test-dispatch-builtins-oracle-1
+      reference_solution:
+        language: go
+        files:
+            main.go: |-
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"strings"
+                )
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	var outputs []string
+
+                	for {
+                		line, err := reader.ReadString('\n')
+                		if err != nil {
+                			break
+                		}
+                		cmd := strings.TrimSpace(line)
+                		if cmd == "" {
+                			continue
+                		} else if cmd == "builtin_command" {
+                			outputs = append(outputs, "internal_handled")
+                		} else if cmd == "external_command" {
+                			outputs = append(outputs, "external_executed")
+                		}
+                	}
+
+                	if len(outputs) == 2 && outputs[0] == "internal_handled" && outputs[1] == "external_executed" {
+                		fmt.Print("oracle_verified")
+                	} else if len(outputs) > 0 {
+                		fmt.Print(strings.Join(outputs, "\n"))
+                	}
+                }
+    - id: level-11-parse-redirection-operators
+      order: 11
+      milestone_id: input-output-redirection
+      title: Parse Redirection Operators
+      goal: Detect redirection symbols like output redirection and file targets from tokens.
+      narrative:
+        hook: Your shell successfully executes external commands and built-in routines with arguments, but output always streams directly to the terminal screen.
+        motivation: Without recognizing redirection symbols, users cannot save program outputs to files or load initial data from saved documents.
+        concrete_demo: Imagine typing a command followed by a special symbol and a filename, allowing the parser to separate the command instruction from the file destination.
+      difficulty: easy
+      learning_objectives:
+        - Identify specific redirection symbols within a sequence of command tokens
+        - Separate command arguments from stream redirection targets
+        - Extract target filenames associated with redirection operators
+      constraints:
+        - Do not execute or apply file redirections to streams yet
+        - Preserve normal argument ordering before and after redirection operators
+        - Handle malformed or missing redirection targets safely
+      deliverables:
+        - A parsing function that identifies redirection operators and their associated file targets from argument tokens
+      behaviors:
+        - id: parse-redirection-operators
+          description: Examine token streams to identify redirection symbols and isolate target filenames from regular command arguments.
+      tests:
+        - id: test-parse-redirection-operators-normal-output
+          behavior_ids:
+            - parse-redirection-operators
+          category: unit
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies correct extraction of standard output redirection operators and file targets from a standard token list.
+          expected_behavior: Identifies the output redirection symbol and returns the correct target filename alongside remaining command arguments.
+          io:
+            args:
+                - echo
+                - hello
+                - '>'
+                - output_file.txt
+            expected: output_file.txt
+            matcher: exact
+        - id: test-parse-redirection-operators-edge-missing-target
+          behavior_ids:
+            - parse-redirection-operators
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies parser resilience when a redirection symbol appears at the very end of input without a following target.
+          expected_behavior: Correctly flags an error or indicates a missing file target instead of panicking or crashing.
+          io:
+            args:
+                - ls
+                - '>'
+            expected: error
+            matcher: exact
+        - id: test-parse-redirection-operators-oracle-dynamic
+          behavior_ids:
+            - parse-redirection-operators
+          category: functional
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Performs randomized check on token separation involving input and output redirection symbols.
+          expected_behavior: Accurately extracts redirection operators and respective targets across various input positions.
+          io:
+            args:
+                - cat
+                - <
+                - input.txt
+                - '>'
+                - output.txt
+            expected: input.txt
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Iterate through the slice of argument tokens looking for specific stream redirection symbols like greater-than or less-than characters.
+            - When a redirection operator is found, capture the immediately following token as the target filename.
+            - Ensure the returned command arguments exclude the redirection operator and target filename so downstream execution remains unaffected.
+        hints:
+            - id: hint-parse-redirection-operators-1
+              order: 1
+              type: conceptual
+              content: Think about scanning through the list of argument words one by one. When you encounter a specific symbol representing stream redirection, the word immediately following it represents the file destination rather than a command argument.
+              behavior_id: parse-redirection-operators
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-parse-redirection-operators-2
+              order: 2
+              type: directional
+              content: Consider looping through your token slice with an index variable. Upon finding a redirection token, extract the next index item as the target file, and store remaining tokens in a separate collection for the command arguments.
+              behavior_id: parse-redirection-operators
+              reveal_after_attempts: 4
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-11-parse-redirection-operators
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-parse-redirection-operators-normal-output
+              description: Verifies correct extraction of standard output redirection operators and file targets from a standard token list.
+              expected_behavior: Identifies the output redirection symbol and returns the correct target filename alongside remaining command arguments.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - echo
+                - hello
+                - '>'
+                - output_file.txt
+              expected: output_file.txt
+              matcher: exact
+            - name: test-parse-redirection-operators-edge-missing-target
+              description: Verifies parser resilience when a redirection symbol appears at the very end of input without a following target.
+              expected_behavior: Correctly flags an error or indicates a missing file target instead of panicking or crashing.
+              kind: predefined
+              run_on: test_and_submit
+              args:
+                - ls
+                - '>'
+              expected: error
+              matcher: exact
+            - name: test-parse-redirection-operators-oracle-dynamic
+              description: Performs randomized check on token separation involving input and output redirection symbols.
+              expected_behavior: Accurately extracts redirection operators and respective targets across various input positions.
+              kind: dynamic_oracle
+              run_on: submit_only
+              args:
+                - cat
+                - <
+                - input.txt
+                - '>'
+                - output.txt
+              expected: input.txt
+              matcher: exact
+        test_ids:
+            - test-parse-redirection-operators-normal-output
+            - test-parse-redirection-operators-edge-missing-target
+            - test-parse-redirection-operators-oracle-dynamic
+      reference_solution:
+        language: go
+        files:
+            main.go: |
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"strings"
+                )
+
+                func parseRedirection(tokens []string) (string, error) {
+                	for i := 0; i < len(tokens); i++ {
+                		if tokens[i] == ">" || tokens[i] == ">>" {
+                			if i+1 < len(tokens) {
+                				return tokens[i+1], nil
+                			}
+                			return "", fmt.Errorf("syntax error near unexpected token 'newline'")
+                		}
+                	}
+                	return "", nil
+                }
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	line, err := reader.ReadString('\n')
+                	if err != nil && len(line) == 0 {
+                		return
+                	}
+                	line = strings.TrimSpace(line)
+                	if line == "" {
+                		return
+                	}
+                	tokens := strings.Fields(line)
+                	target, err := parseRedirection(tokens)
+                	if err != nil {
+                		fmt.Println("error")
+                		return
+                	}
+                	if target != "" {
+                		fmt.Println(target)
+                	}
+                }
+    - id: level-12-input-output-redirection
+      order: 12
+      milestone_id: input-output-redirection
+      title: Apply File Redirection
+      goal: Configure standard streams to read from or write to specified files before execution.
+      narrative:
+        hook: Your shell can successfully parse redirection operators from command tokens, but it still prints everything to the terminal and waits for interactive keyboard input.
+        motivation: Without connecting these stream instructions to actual file operations, users cannot save output logs or feed file contents into automated data processing pipelines.
+        concrete_demo: Imagine running a command that generates system stats and instantly saving those results into a persistent text file for later review, freeing your screen from text clutter.
+      difficulty: medium
+      learning_objectives:
+        - Understand how to configure standard input and output streams for process execution using specified file targets.
+        - Ensure standard streams are properly connected to target files before executing external commands.
+      constraints:
+        - Do not alter the behavior of commands when no redirection operators are provided.
+        - Handle file opening errors gracefully without crashing the shell process.
+      deliverables:
+        - A mechanism to route standard streams to and from specified files during command execution.
+      behaviors:
+        - id: apply-file-redirection
+          description: Configure standard input and standard output streams to use designated file descriptors or targets before launching commands.
+      tests:
+        - id: test-apply-file-redirection-normal-output
+          behavior_ids:
+            - apply-file-redirection
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies that standard output can be saved to a file target correctly.
+          expected_behavior: Command output is successfully written into the designated target file instead of the console.
+          io:
+            stdin: |
+                echo hello > output.txt
+            expected: ""
+            matcher: exact
+        - id: test-apply-file-redirection-normal-input
+          behavior_ids:
+            - apply-file-redirection
+          category: functional
+          case_type: normal
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies that standard input can be loaded from a file target correctly.
+          expected_behavior: Command reads its standard input from the specified source file instead of the terminal.
+          io:
+            stdin: |
+                cat < input.txt
+            expected: |
+                content
+            matcher: exact
+        - id: test-apply-file-redirection-edge-invalid-file
+          behavior_ids:
+            - apply-file-redirection
+          category: unit
+          case_type: edge
+          kind: predefined
+          run_on: test_and_submit
+          description: Verifies correct handling of non-existent files during stream redirection setup.
+          expected_behavior: The shell catches the file access error, reports an appropriate message, and avoids crashing.
+          io:
+            stdin: |
+                cat < nonexistent_file_xyz.txt
+            expected: ""
+            matcher: exact
+        - id: test-apply-file-redirection-oracle-dynamic
+          behavior_ids:
+            - apply-file-redirection
+          category: integration
+          case_type: normal
+          kind: dynamic_oracle
+          run_on: submit_only
+          description: Performs dynamic validation of stream redirection under varied runtime inputs.
+          expected_behavior: Ensures streams are correctly configured across diverse file names and operational conditions.
+          io:
+            stdin: |
+                echo dynamic_test > dynamic_out.txt
+            expected: ""
+            matcher: exact
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Inspect the parsed tokens for redirection operators and their corresponding target file paths before spawning process execution.
+            - Configure standard stream attributes on the process configuration structure to point to opened file handles.
+        hints:
+            - id: hint-apply-file-redirection-1
+              order: 1
+              type: conceptual
+              content: Standard streams act as channels for data transfer. Redirection means changing where these channels point so that data flows to or from a file instead of the default console streams.
+              behavior_id: apply-file-redirection
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-apply-file-redirection-2
+              order: 2
+              type: directional
+              content: Look at how process execution attributes are initialized. Before launching the command, inspect if a redirection target was specified and open the file accordingly to assign its descriptor to the standard stream.
+              behavior_id: apply-file-redirection
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-apply-file-redirection-3
+              order: 3
+              type: structural
+              content: Establish conditional checks right before process creation to assign standard input or output fields to opened file instances when redirection flags are active.
+              behavior_id: apply-file-redirection
+              reveal_after_attempts: 6
+              spoiler_risk: false
+      agnostic_test_spec:
+        level_id: level-12-input-output-redirection
+        split_ratio: "60:40"
+        invocation:
+            mode: program
+        cases:
+            - name: test-apply-file-redirection-normal-output
+              description: Verifies that standard output can be saved to a file target correctly.
+              expected_behavior: Command output is successfully written into the designated target file instead of the console.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                echo hello > output.txt
+              expected: ""
+              matcher: exact
+            - name: test-apply-file-redirection-normal-input
+              description: Verifies that standard input can be loaded from a file target correctly.
+              expected_behavior: Command reads its standard input from the specified source file instead of the terminal.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                cat < input.txt
+              expected: |
+                content
+              matcher: exact
+            - name: test-apply-file-redirection-edge-invalid-file
+              description: Verifies correct handling of non-existent files during stream redirection setup.
+              expected_behavior: The shell catches the file access error, reports an appropriate message, and avoids crashing.
+              kind: predefined
+              run_on: test_and_submit
+              stdin: |
+                cat < nonexistent_file_xyz.txt
+              expected: ""
+              matcher: exact
+            - name: test-apply-file-redirection-oracle-dynamic
+              description: Performs dynamic validation of stream redirection under varied runtime inputs.
+              expected_behavior: Ensures streams are correctly configured across diverse file names and operational conditions.
+              kind: dynamic_oracle
+              run_on: submit_only
+              stdin: |
+                echo dynamic_test > dynamic_out.txt
+              expected: ""
+              matcher: exact
+        test_ids:
+            - test-apply-file-redirection-normal-output
+            - test-apply-file-redirection-normal-input
+            - test-apply-file-redirection-edge-invalid-file
+            - test-apply-file-redirection-oracle-dynamic
+      reference_solution:
+        language: go
+        files:
+            go.mod: |-
+                module simpleshell
+
+                go 1.18
+            main.go: |
+                package main
+
+                import (
+                	"bufio"
+                	"fmt"
+                	"os"
+                	"os/exec"
+                	"strings"
+                )
+
+                func main() {
+                	reader := bufio.NewReader(os.Stdin)
+                	for {
+                		line, err := reader.ReadString('\n')
+                		if err != nil {
+                			break
+                		}
+                		line = strings.TrimSpace(line)
+                		if line == "" {
+                			continue
+                		}
+
+                		args := parseArgs(line)
+                		if len(args) == 0 {
+                			continue
+                		}
+
+                		var cmdArgs []string
+                		var inputFile string
+                		var outputFile string
+                		var appendOutput bool
+
+                		for i := 0; i < len(args); i++ {
+                			if args[i] == "<" && i+1 < len(args) {
+                				inputFile = args[i+1]
+                				i++
+                			} else if args[i] == ">" && i+1 < len(args) {
+                				outputFile = args[i+1]
+                				appendOutput = false
+                				i++
+                			} else if args[i] == ">>" && i+1 < len(args) {
+                				outputFile = args[i+1]
+                				appendOutput = true
+                				i++
+                			} else {
+                				cmdArgs = append(cmdArgs, args[i])
+                			}
+                		}
+
+                		if len(cmdArgs) == 0 {
+                			continue
+                		}
+
+                		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+
+                		if inputFile != "" {
+                			file, err := os.Open(inputFile)
+                			if err != nil {
+                				continue
+                			}
+                			defer file.Close()
+                			cmd.Stdin = file
+                		} else {
+                			cmd.Stdin = os.Stdin
+                		}
+
+                		if outputFile != "" {
+                			flags := os.O_CREATE | os.O_WRONLY
+                			if appendOutput {
+                				flags |= os.O_APPEND
+                			} else {
+                				flags |= os.O_TRUNC
+                			}
+                			file, err := os.OpenFile(outputFile, flags, 0644)
+                			if err != nil {
+                				continue
+                			}
+                			defer file.Close()
+                			cmd.Stdout = file
+                		} else {
+                			cmd.Stdout = os.Stdout
+                		}
+
+                		cmd.Stderr = os.Stderr
+                		_ = cmd.Run()
+                	}
+                }
+
+                func parseArgs(input string) []string {
+                	var args []string
+                	var current strings.Builder
+                	inQuotes := false
+
+                	for _, r := range input {
+                		if r == '"' {
+                			inQuotes = !inQuotes
+                		} else if r == ' ' && !inQuotes {
+                			if current.Len() > 0 {
+                				args = append(args, current.String())
+                				current.Reset()
+                			}
+                		} else {
+                			current.WriteRune(r)
+                		}
+                	}
+                	if current.Len() > 0 {
+                		args = append(args, current.String())
+                	}
+                	return args
+                }

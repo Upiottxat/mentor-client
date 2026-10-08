@@ -1,0 +1,33 @@
+{
+  "level_id": "display-shell-prompt-level",
+  "order": 1,
+  "milestone_id": "repl-loop",
+  "language": "go",
+  "build": {
+    "required": true
+  },
+  "implementation_guidance": [
+    "Use the standard output printing mechanism provided by your language runtime to display the prompt string.",
+    "Ensure no trailing unintended characters cause discrepancies with the expected output."
+  ],
+  "hints": [
+    {
+      "id": "hint-display-shell-prompt-1",
+      "order": 1,
+      "type": "conceptual",
+      "content": "Interactive command-line applications typically begin by writing a small indicator string to the standard output stream to signal readiness to the user.",
+      "behavior_id": "display-shell-prompt",
+      "reveal_after_attempts": 2,
+      "spoiler_risk": false
+    },
+    {
+      "id": "hint-display-shell-prompt-2",
+      "order": 2,
+      "type": "directional",
+      "content": "Look for the primary output writing function in your runtime environment that sends text directly to standard output without adding extra formatting unless desired.",
+      "behavior_id": "display-shell-prompt",
+      "reveal_after_attempts": 4,
+      "spoiler_risk": false
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+milestone_id: process-execution
+sections:
+    - id: sec-spawn-child
+      title: Spawn Child Process
+      content: When a user types an external command into a shell, the shell cannot execute it directly inside its own memory space without risking its own stability. Instead, the shell requests the operating system kernel to fork a new process or spawn a fresh child execution context. Think of the shell as a manager delegating a specialized task to a contractor. The manager provides the name of the tool to run along with a list of arguments, and the operating system locates the binary on disk, allocates memory, sets up file descriptors, and begins execution. Passing arguments correctly ensures the binary receives the exact flags and parameters intended by the user.
+      introduced_at_level_id: level-6-process-execution
+      used_by_levels: []
+      is_shared: false
+    - id: sec-wait-completion
+      title: Wait for Process Completion
+      content: 'Once a child process is spawned, the parent shell faces a choice: run concurrently or wait. For a standard interactive shell, the user expects to see the prompt return only after the running program has finished its work. This requires blocking the parent process until the operating system signals that the child has terminated. Think of this like a conductor waiting for an orchestra to finish playing a movement before cueing the next piece. The operating system handles the synchronization, allowing the shell to pause its main loop, collect the exit status when the child exits, and restore prompt readiness.'
+      introduced_at_level_id: level-wait-for-process-completion
+      used_by_levels: []
+      is_shared: false
+    - id: sec-error-handling
+      title: Handle Execution Errors
+      content: In a robust environment, things inevitably go wrong. A user might misspell a command name, reference a non-existent binary, or attempt to run a program without proper permissions. If a shell panics or crashes when encountering such failures, the user experience breaks down completely. Graceful error handling ensures that when the operating system fails to locate a binary or rejects execution, the shell captures the error, reports a meaningful diagnostic message to standard error, and returns control to the prompt. This resilience separates fragile prototypes from production-grade tools.
+      introduced_at_level_id: level-8
+      used_by_levels: []
+      is_shared: false

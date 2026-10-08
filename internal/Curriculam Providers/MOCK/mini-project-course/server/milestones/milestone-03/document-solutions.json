@@ -1,0 +1,44 @@
+{
+  "milestone_id": "process-execution",
+  "questions": [
+    {
+      "question_id": "q-1",
+      "level_id": "level-6-process-execution",
+      "answer_index": 2,
+      "explanation": "Passing command and arguments as separate parameters prevents shell injection vulnerabilities and ensures the execve system call correctly interprets the executable path and its argv array."
+    },
+    {
+      "question_id": "q-2",
+      "level_id": "level-wait-for-process-completion",
+      "answer_index": 1,
+      "explanation": "Cmd.Run() starts the command and immediately blocks waiting for its completion (equivalent to Start() followed by Wait()). Cmd.Start() non-blockingly launches the process, returning control immediately."
+    },
+    {
+      "question_id": "q-3",
+      "level_id": "level-8",
+      "answer_index": 3,
+      "explanation": "When a command is missing or execution fails, the shell should catch the specific error returned by the execution function (such as exec.ErrNotFound) and print a clean error message to standard error without crashing."
+    }
+  ],
+  "challenges": [
+    {
+      "challenge_id": "ch-spawn-command",
+      "level_id": "level-6-process-execution",
+      "title": "Spawn and Execute External Command",
+      "solution": "package main\n\nimport (\n\t\"os\"\n\t\"os/exec\"\n)\n\nfunc executeCommand(name string, args []string) error {\n\tcmd := exec.Command(name, args...)\n\tcmd.Stdout = os.Stdout\n\tcmd.Stderr = os.Stderr\n\treturn cmd.Run()\n}"
+    },
+    {
+      "challenge_id": "ch-wait-process",
+      "level_id": "level-wait-for-process-completion",
+      "title": "Wait for Process Completion",
+      "solution": "package main\n\nimport (\n\t\"os\"\n\t\"os/exec\"\n)\n\nfunc runAndWait(name string, args []string) error {\n\tcmd := exec.Command(name, args...)\n\tcmd.Stdout = os.Stdout\n\tcmd.Stderr = os.Stderr\n\terr := cmd.Start()\n\tif err != nil {\n\t\treturn err\n\t}\n\treturn cmd.Wait()\n}"
+    },
+    {
+      "challenge_id": "ch-handle-errors",
+      "level_id": "level-8",
+      "title": "Graceful Error Handling for Missing Binaries",
+      "solution": "package main\n\nimport (\n\t\"errors\"\n\t\"fmt\"\n\t\"os\"\n\t\"os/exec\"\n)\n\nfunc safeExecute(name string, args []string) {\n\tcmd := exec.Command(name, args...)\n\tcmd.Stdout = os.Stdout\n\tcmd.Stderr = os.Stderr\n\terr := cmd.Run()\n\tif err != nil {\n\t\tif errors.Is(err, exec.ErrNotFound) {\n\t\t\tfmt.Fprintf(os.Stderr, \"shell: command not found: %s\\n\", name)\n\t\t} else {\n\t\t\tfmt.Fprintf(os.Stderr, \"shell: error executing %s: %v\\n\", name, err)\n\t\t}\n\t}\n}"
+    }
+  ],
+  "interactive_challenges": null
+}

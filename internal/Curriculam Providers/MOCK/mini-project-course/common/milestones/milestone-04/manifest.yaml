@@ -1,0 +1,40 @@
+schema_version: 1
+milestone_id: built-in-commands
+order: 4
+artifacts:
+    overview: overview.yaml
+    theory: theory.yaml
+    questions: questions.yaml
+    challenges: challenges.yaml
+    diagrams: diagrams.yaml
+    interactives: interactives.yaml
+language_artifacts:
+    go:
+        reference: reference.yaml
+        examples: examples.yaml
+        interactives: interactives.yaml
+server_artifacts:
+    solutions: document-solutions.yaml
+    bossfight_contract: milestone-04.bossfight.yaml
+learning_path:
+    - level_id: level-implement-cd-command
+      unlocks:
+        theory:
+            - sec-cd-command
+        questions:
+            - q-1
+            - q-03
+        challenges:
+            - ch-cd-impl
+        diagrams: []
+        interactives: []
+    - level_id: level-10-built-in-commands
+      unlocks:
+        theory:
+            - sec-dispatch
+        questions:
+            - q-2
+        challenges:
+            - ch-dispatch
+        diagrams: []
+        interactives: []

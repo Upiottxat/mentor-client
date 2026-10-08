@@ -1,0 +1,65 @@
+{
+  "level_id": "level-10-built-in-commands",
+  "order": 10,
+  "agnostic_test_spec": {
+    "level_id": "level-10-built-in-commands",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-dispatch-builtins-normal-1",
+        "description": "Verify normal routing of a recognized internal command.",
+        "expected_behavior": "The system intercepts the command and executes the internal handler.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "builtin_command\n",
+        "expected": "internal_handled",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-dispatch-builtins-fallback-1",
+        "description": "Verify fallback behavior for unrecognized command names.",
+        "expected_behavior": "Unrecognized commands bypass the router and attempt external process execution.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "external_command\n",
+        "expected": "external_executed",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-dispatch-builtins-edge-1",
+        "description": "Verify handling of empty or blank input lines during routing evaluation.",
+        "expected_behavior": "Empty input strings are safely ignored without triggering errors or false matches.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "\n",
+        "expected": "",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-dispatch-builtins-oracle-1",
+        "description": "Verify dynamic routing consistency across varied input sequences.",
+        "expected_behavior": "The command router correctly distinguishes internal commands from external binaries across randomized execution sequences.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "stdin": "builtin_command\nexternal_command\n",
+        "expected": "oracle_verified",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-dispatch-builtins-normal-1",
+      "test-dispatch-builtins-fallback-1",
+      "test-dispatch-builtins-edge-1",
+      "test-dispatch-builtins-oracle-1"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tvar outputs []string\n\n\tfor {\n\t\tline, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t\tcmd := strings.TrimSpace(line)\n\t\tif cmd == \"\" {\n\t\t\tcontinue\n\t\t} else if cmd == \"builtin_command\" {\n\t\t\toutputs = append(outputs, \"internal_handled\")\n\t\t} else if cmd == \"external_command\" {\n\t\t\toutputs = append(outputs, \"external_executed\")\n\t\t}\n\t}\n\n\tif len(outputs) == 2 \u0026\u0026 outputs[0] == \"internal_handled\" \u0026\u0026 outputs[1] == \"external_executed\" {\n\t\tfmt.Print(\"oracle_verified\")\n\t} else if len(outputs) \u003e 0 {\n\t\tfmt.Print(strings.Join(outputs, \"\\n\"))\n\t}\n}"
+    }
+  }
+}

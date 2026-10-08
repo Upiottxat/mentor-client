@@ -1,0 +1,74 @@
+{
+  "milestone_id": "repl-loop",
+  "questions": [
+    {
+      "id": "q-1",
+      "level_id": "display-shell-prompt-level",
+      "question": "Why is it important to explicitly flush the standard output stream (stdout) immediately after writing a shell prompt?",
+      "options": [
+        "To clear the input buffer of any trailing newline characters",
+        "To allocate memory for the upcoming user command string",
+        "To ensure the prompt is immediately displayed when output is buffered",
+        "To reset the terminal color codes back to default values"
+      ],
+      "placement": {
+        "capability_ids": [
+          "display-shell-prompt",
+          "read-user-input",
+          "handle-exit-command"
+        ],
+        "behavior_ids": [
+          "display-shell-prompt"
+        ],
+        "introduced_at_level_id": "display-shell-prompt-level",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "id": "q-2",
+      "level_id": "level-2-read-user-input",
+      "question": "When reading input in a Go REPL using bufio.Scanner, what is the primary advantage over directly using fmt.Scan?",
+      "options": [
+        "bufio.Scanner automatically executes any shell commands it reads",
+        "bufio.Scanner safely reads arbitrarily long lines separated by newlines, including spaces",
+        "fmt.Scan cannot be used with standard input streams in Go",
+        "bufio.Scanner prevents buffer overflows by restricting input to 8 bytes"
+      ],
+      "placement": {
+        "capability_ids": [
+          "display-shell-prompt",
+          "read-user-input",
+          "handle-exit-command"
+        ],
+        "behavior_ids": [
+          "read-user-input"
+        ],
+        "introduced_at_level_id": "level-2-read-user-input",
+        "difficulty": "medium"
+      }
+    },
+    {
+      "id": "q-3",
+      "level_id": "level-3-handle-exit-command",
+      "question": "How should a robust Read-Eval-Print Loop handle an EOF (End-Of-File) condition on standard input (e.g., when the user presses Ctrl+D)?",
+      "options": [
+        "Break out of the REPL loop and terminate the program cleanly with exit code 0",
+        "Automatically restart the standard input stream and display an error warning",
+        "Ignore the EOF signal and wait indefinitely for a keyboard interrupt",
+        "Panic immediately to alert the operating system of an abnormal stream termination"
+      ],
+      "placement": {
+        "capability_ids": [
+          "display-shell-prompt",
+          "read-user-input",
+          "handle-exit-command"
+        ],
+        "behavior_ids": [
+          "handle-exit-command"
+        ],
+        "introduced_at_level_id": "level-3-handle-exit-command",
+        "difficulty": "easy"
+      }
+    }
+  ]
+}

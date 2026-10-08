@@ -1,0 +1,92 @@
+level_id: level-11-parse-redirection-operators
+order: 11
+agnostic_test_spec:
+    level_id: level-11-parse-redirection-operators
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-parse-redirection-operators-normal-output
+          description: Verifies correct extraction of standard output redirection operators and file targets from a standard token list.
+          expected_behavior: Identifies the output redirection symbol and returns the correct target filename alongside remaining command arguments.
+          kind: predefined
+          run_on: test_and_submit
+          args:
+            - echo
+            - hello
+            - '>'
+            - output_file.txt
+          expected: output_file.txt
+          matcher: exact
+        - name: test-parse-redirection-operators-edge-missing-target
+          description: Verifies parser resilience when a redirection symbol appears at the very end of input without a following target.
+          expected_behavior: Correctly flags an error or indicates a missing file target instead of panicking or crashing.
+          kind: predefined
+          run_on: test_and_submit
+          args:
+            - ls
+            - '>'
+          expected: error
+          matcher: exact
+        - name: test-parse-redirection-operators-oracle-dynamic
+          description: Performs randomized check on token separation involving input and output redirection symbols.
+          expected_behavior: Accurately extracts redirection operators and respective targets across various input positions.
+          kind: dynamic_oracle
+          run_on: submit_only
+          args:
+            - cat
+            - <
+            - input.txt
+            - '>'
+            - output.txt
+          expected: input.txt
+          matcher: exact
+    test_ids:
+        - test-parse-redirection-operators-normal-output
+        - test-parse-redirection-operators-edge-missing-target
+        - test-parse-redirection-operators-oracle-dynamic
+reference_solution:
+    language: go
+    files:
+        main.go: |
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"strings"
+            )
+
+            func parseRedirection(tokens []string) (string, error) {
+            	for i := 0; i < len(tokens); i++ {
+            		if tokens[i] == ">" || tokens[i] == ">>" {
+            			if i+1 < len(tokens) {
+            				return tokens[i+1], nil
+            			}
+            			return "", fmt.Errorf("syntax error near unexpected token 'newline'")
+            		}
+            	}
+            	return "", nil
+            }
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	line, err := reader.ReadString('\n')
+            	if err != nil && len(line) == 0 {
+            		return
+            	}
+            	line = strings.TrimSpace(line)
+            	if line == "" {
+            		return
+            	}
+            	tokens := strings.Fields(line)
+            	target, err := parseRedirection(tokens)
+            	if err != nil {
+            		fmt.Println("error")
+            		return
+            	}
+            	if target != "" {
+            		fmt.Println(target)
+            	}
+            }

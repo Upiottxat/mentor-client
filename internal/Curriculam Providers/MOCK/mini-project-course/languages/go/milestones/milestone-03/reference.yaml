@@ -1,0 +1,51 @@
+milestone_id: process-execution
+language: go
+sections:
+    - common_section_id: sec-spawn-child
+      syntax_topics:
+        - exec.Command
+        - Cmd.Run
+        - Cmd.Start
+        - Cmd.Wait
+      examples:
+        - theory_section_id: sec-spawn-child
+          title: Spawning and running a command
+          code: |-
+            cmd := exec.Command("echo", "hello", "world")
+            err := cmd.Run()
+            if err != nil {
+                fmt.Fprintln(os.Stderr, err)
+            }
+          explanation: The exec.Command function creates a Command struct configured to run the specified binary with arguments, and Run starts the command and waits for it to complete.
+    - common_section_id: sec-wait-completion
+      syntax_topics:
+        - Process synchronization
+        - Exit status handling
+      examples:
+        - theory_section_id: sec-wait-completion
+          title: Waiting for process completion
+          code: |-
+            cmd := exec.Command("sleep", "2")
+            err := cmd.Start()
+            if err != nil {
+                log.Fatal(err)
+            }
+            err = cmd.Wait()
+            if err != nil {
+                log.Printf("Command finished with error: %v", err)
+            }
+          explanation: Using Start launches the process asynchronously, and calling Wait blocks the parent execution until the child process finishes.
+    - common_section_id: sec-error-handling
+      syntax_topics:
+        - Error checking
+        - ExitError handling
+      examples:
+        - theory_section_id: sec-error-handling
+          title: Handling missing commands gracefully
+          code: |-
+            cmd := exec.Command("nonexistent-command")
+            err := cmd.Run()
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "Execution failed: %v\n", err)
+            }
+          explanation: If the binary cannot be found, Run returns an error that can be checked and printed without terminating the main shell application.

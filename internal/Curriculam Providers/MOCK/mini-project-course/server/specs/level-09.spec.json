@@ -1,0 +1,63 @@
+{
+  "level_id": "level-implement-cd-command",
+  "order": 9,
+  "agnostic_test_spec": {
+    "level_id": "level-implement-cd-command",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-implement-cd-normal",
+        "description": "Verifies that supplying a valid target path updates the working directory successfully.",
+        "expected_behavior": "The directory updates correctly without spawning external tools.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "cd",
+          "/tmp"
+        ],
+        "expected": "",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-implement-cd-edge",
+        "description": "Verifies behavior when supplying an invalid or nonexistent target path.",
+        "expected_behavior": "The directory remains unchanged and an error indicator is reported.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "cd",
+          "/nonexistent-directory-xyz"
+        ],
+        "expected": "error",
+        "matcher": "trim"
+      },
+      {
+        "name": "test-implement-cd-oracle",
+        "description": "Dynamic verification of directory navigation across multiple sequential steps.",
+        "expected_behavior": "Sequential path changes update state accurately.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "args": [
+          "cd",
+          "."
+        ],
+        "expected": "",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-implement-cd-normal",
+      "test-implement-cd-edge",
+      "test-implement-cd-oracle"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tfmt.Print(\"$ \")\n\t\tline, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t\tline = strings.TrimSpace(line)\n\t\tif line == \"\" {\n\t\t\tcontinue\n\t\t}\n\n\t\targs := strings.Fields(line)\n\t\tcmd := args[0]\n\n\t\tswitch cmd {\n\t\tcase \"exit\":\n\t\t\treturn\n\t\tcase \"cd\":\n\t\t\tvar targetDir string\n\t\t\tif len(args) \u003c 2 {\n\t\t\t\thome, err := os.UserHomeDir()\n\t\t\t\tif err != nil {\n\t\t\t\t\tfmt.Fprintln(os.Stderr, \"error\")\n\t\t\t\t\tcontinue\n\t\t\t\t}\n\t\t\t\ttargetDir = home\n\t\t\t} else {\n\t\t\t\ttargetDir = args[1]\n\t\t\t}\n\n\t\t\terr := os.Chdir(targetDir)\n\t\t\tif err != nil {\n\t\t\t\tfmt.Fprintln(os.Stderr, \"error\")\n\t\t\t}\n\t\tcase \"pwd\":\n\t\t\tdir, err := os.Getwd()\n\t\t\tif err != nil {\n\t\t\t\tfmt.Fprintln(os.Stderr, \"error\")\n\t\t\t} else {\n\t\t\t\tfmt.Println(dir)\n\t\t\t}\n\t\tdefault:\n\t\t\tfmt.Printf(\"%s: command not found\\n\", cmd)\n\t\t}\n\t}\n}"
+    }
+  }
+}

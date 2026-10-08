@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "milestone_id": "input-output-redirection",
+  "order": 5,
+  "artifacts": {
+    "overview": "overview.json",
+    "theory": "theory.json",
+    "questions": "questions.json",
+    "challenges": "challenges.json",
+    "diagrams": "diagrams.json",
+    "interactives": "interactives.json"
+  },
+  "language_artifacts": {
+    "go": {
+      "reference": "reference.json",
+      "examples": "examples.json",
+      "interactives": "interactives.json"
+    }
+  },
+  "server_artifacts": {
+    "solutions": "document-solutions.json",
+    "bossfight_contract": "milestone-05.bossfight.json"
+  },
+  "learning_path": [
+    {
+      "level_id": "level-11-parse-redirection-operators",
+      "unlocks": {
+        "theory": [
+          "sec-parse-operators"
+        ],
+        "questions": [
+          "q-1",
+          "q-3"
+        ],
+        "challenges": [
+          "ch-1"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    },
+    {
+      "level_id": "level-12-input-output-redirection",
+      "unlocks": {
+        "theory": [
+          "sec-apply-redirection"
+        ],
+        "questions": [
+          "q-2",
+          "q-4"
+        ],
+        "challenges": [
+          "ch-2"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    }
+  ]
+}

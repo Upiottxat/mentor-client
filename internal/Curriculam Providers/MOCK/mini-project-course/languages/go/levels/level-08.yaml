@@ -1,0 +1,50 @@
+level_id: level-8
+order: 8
+milestone_id: process-execution
+language: go
+build:
+    required: true
+implementation_guidance:
+    - Inspect the result returned when launching or waiting on the child process.
+    - Check for system-level errors indicating that the binary could not be found or executed.
+    - Write the error message to standard error rather than standard output.
+hints:
+    - id: hint-handle-execution-errors-1
+      order: 1
+      type: conceptual
+      content: Consider what happens in an operating system when you request execution of a program that does not exist on disk.
+      behavior_id: handle-execution-errors
+      reveal_after_attempts: 2
+      spoiler_risk: false
+    - id: hint-handle-execution-errors-2
+      order: 2
+      type: directional
+      content: Check the return values of the process invocation step to determine if an error occurred before attempting to wait.
+      behavior_id: handle-execution-errors
+      reveal_after_attempts: 4
+      spoiler_risk: false
+    - id: hint-handle-execution-errors-3
+      order: 3
+      type: structural
+      content: Use conditional statements to branch your logic depending on whether the execution returned a non-nil error object.
+      behavior_id: handle-execution-errors
+      reveal_after_attempts: 6
+      spoiler_risk: false
+    - id: hint-handle-execution-errors-4
+      order: 4
+      type: partial_impl
+      content: |-
+        if err != nil {
+            fmt.Fprintln(os.Stderr, "error:", err)
+            // continue prompt loop
+        }
+      behavior_id: handle-execution-errors
+      reveal_after_attempts: 8
+      spoiler_risk: true
+    - id: hint-handle-execution-errors-5
+      order: 5
+      type: near_solution
+      content: Capture the error from the process starter, print it appropriately to standard error, and ensure your main command loop does not break out of execution.
+      behavior_id: handle-execution-errors
+      reveal_after_attempts: 10
+      spoiler_risk: true

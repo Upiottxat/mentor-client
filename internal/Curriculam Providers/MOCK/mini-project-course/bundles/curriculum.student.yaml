@@ -1,0 +1,765 @@
+curriculum:
+    id: simple-shell
+    name: Simple Shell
+    version: 0.1.0
+    target_language: go
+    difficulty: beginner
+    ecosystem_languages:
+        - language: go
+          role: primary
+          purpose: Main implementation language for the interactive shell.
+          extension: .go
+milestones:
+    - id: repl-loop
+      order: 1
+      title: Read-Eval-Print Loop
+      goal: Establish the foundational interactive loop that displays a prompt, reads user input, and exits cleanly.
+      required_capabilities:
+        - id: display-shell-prompt
+          description: Output a visible prompt indicating the shell is ready for user input.
+        - id: read-user-input
+          description: Read standard input lines from the user interactively.
+        - id: handle-exit-command
+          description: Gracefully terminate the shell upon receiving an exit command or EOF.
+      level_ids:
+        - display-shell-prompt-level
+        - level-2-read-user-input
+        - level-3-handle-exit-command
+      boss_fight:
+        title: Interactive REPL Integration
+        public_preview: Combine prompt display, line reading, and exit handling into a working interactive loop.
+        integrated_behavior_ids: []
+        contract:
+            scenario: ""
+            steps: []
+        harness:
+            language: ""
+            test_code: ""
+            expected_output: ""
+        concept_mcqs: []
+    - id: command-parsing
+      order: 2
+      title: Command Parsing and Tokenization
+      goal: Break the raw user input string into executable command names and distinct argument tokens.
+      required_capabilities:
+        - id: tokenize-input-string
+          description: Split a raw input string into whitespace-separated argument tokens.
+        - id: handle-quoted-arguments
+          description: Support quoted strings as single arguments containing whitespace.
+      level_ids:
+        - level-tokenize-input-string
+        - level-5-command-parsing
+      boss_fight:
+        title: Advanced Command Line Parser
+        public_preview: Test your ability to parse complex command lines containing both normal whitespace-separated tokens and quoted arguments with internal spaces.
+        integrated_behavior_ids: []
+        contract:
+            scenario: ""
+            steps: []
+        harness:
+            language: ""
+            test_code: ""
+            expected_output: ""
+        concept_mcqs: []
+    - id: process-execution
+      order: 3
+      title: Process Execution
+      goal: Execute external programs by spawning child processes and waiting for their completion.
+      required_capabilities:
+        - id: spawn-child-process
+          description: Execute external commands using system binaries and passed arguments.
+        - id: wait-for-process-completion
+          description: Block the shell until the spawned child process finishes execution.
+        - id: handle-execution-errors
+          description: Gracefully handle command-not-found and execution failures without crashing.
+      level_ids:
+        - level-6-process-execution
+        - level-wait-for-process-completion
+        - level-8
+      boss_fight:
+        title: Command Runner Integration
+        public_preview: Combine child process spawning, completion waiting, and error handling into a unified command execution flow.
+        integrated_behavior_ids: []
+        contract:
+            scenario: ""
+            steps: []
+        harness:
+            language: ""
+            test_code: ""
+            expected_output: ""
+        concept_mcqs: []
+    - id: built-in-commands
+      order: 4
+      title: Built-in Shell Commands
+      goal: Implement internal shell commands that alter the shell state directly rather than launching external processes.
+      required_capabilities:
+        - id: implement-cd-command
+          description: Change the current working directory of the shell process.
+        - id: dispatch-builtins
+          description: Route recognized command names to built-in handlers instead of execution.
+      level_ids:
+        - level-implement-cd-command
+        - level-10-built-in-commands
+      boss_fight:
+        title: Shell Built-ins Integration
+        public_preview: Test routing built-in commands and changing the current working directory.
+        integrated_behavior_ids: []
+        contract:
+            scenario: ""
+            steps: []
+        harness:
+            language: ""
+            test_code: ""
+            expected_output: ""
+        concept_mcqs: []
+    - id: input-output-redirection
+      order: 5
+      title: Input and Output Redirection
+      goal: Support redirecting command standard input and standard output streams to files.
+      required_capabilities:
+        - id: parse-redirection-operators
+          description: Detect redirection symbols like output redirection and file targets from tokens.
+        - id: apply-file-redirection
+          description: Configure standard streams to read from or write to specified files before execution.
+      level_ids:
+        - level-11-parse-redirection-operators
+        - level-12-input-output-redirection
+      boss_fight:
+        title: Redirecting Shell Streams
+        public_preview: Combine parsing of redirection operators with configuring file streams to execute commands with redirected input and output.
+        integrated_behavior_ids: []
+        contract:
+            scenario: ""
+            steps: []
+        harness:
+            language: ""
+            test_code: ""
+            expected_output: ""
+        concept_mcqs: []
+levels:
+    - id: display-shell-prompt-level
+      order: 1
+      milestone_id: repl-loop
+      title: Display Shell Prompt
+      goal: Output a visible prompt indicating the shell is ready for user input.
+      narrative:
+        hook: Every interactive command-line tool begins with a blank slate and no visible indicator of life.
+        motivation: Without a visual prompt, users cannot know if the program is running, hung, or waiting for input.
+        concrete_demo: When launching the program, a clean indicator string instantly appears on the screen to show that the system is listening and ready.
+      difficulty: easy
+      learning_objectives:
+        - Understand how a command-line interface communicates readiness through a prompt string.
+        - Learn how to write text directly to the standard output stream.
+      constraints:
+        - Do not read any input from standard input.
+        - Do not implement an interactive loop or continuous execution.
+        - Do not mention any specific programming language in common fields.
+      deliverables:
+        - A program that outputs the designated shell prompt string to standard output.
+      behaviors:
+        - id: display-shell-prompt
+          description: Prints a clear, visible shell prompt to standard output.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Use the standard output printing mechanism provided by your language runtime to display the prompt string.
+            - Ensure no trailing unintended characters cause discrepancies with the expected output.
+        hints:
+            - id: hint-display-shell-prompt-1
+              order: 1
+              type: conceptual
+              content: Interactive command-line applications typically begin by writing a small indicator string to the standard output stream to signal readiness to the user.
+              behavior_id: display-shell-prompt
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-display-shell-prompt-2
+              order: 2
+              type: directional
+              content: Look for the primary output writing function in your runtime environment that sends text directly to standard output without adding extra formatting unless desired.
+              behavior_id: display-shell-prompt
+              reveal_after_attempts: 4
+              spoiler_risk: false
+    - id: level-2-read-user-input
+      order: 2
+      milestone_id: repl-loop
+      title: Read User Input
+      goal: Read standard input lines from the user interactively.
+      narrative:
+        hook: Your interface can successfully display a prompt, but it currently lacks any mechanism to receive feedback or commands from the person sitting at the terminal.
+        motivation: Without the ability to capture incoming text streams, any interactive program remains completely deaf to user intent, rendering dynamic operation impossible.
+        concrete_demo: When an operator types a sequence of characters into the terminal window and presses enter, the application captures those exact keystrokes as a continuous data stream for processing.
+      difficulty: medium
+      learning_objectives:
+        - Capture raw text streams provided through standard input streams.
+        - Process incoming text lines sequentially for further interpretation.
+      constraints:
+        - Do not implement command execution or argument parsing in this level.
+        - Operate strictly on standard input channels.
+      deliverables:
+        - A routine capable of capturing a single line of text from standard input.
+      behaviors:
+        - id: read-user-input
+          description: The system successfully reads standard input lines provided by the user.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Look for standard library facilities designed for buffered text input streams.
+            - Ensure proper handling of line termination characters when reading input.
+        hints:
+            - id: hint-read-user-input-1
+              order: 1
+              type: conceptual
+              content: Interactive command-line applications must listen to the standard input stream to accept text data supplied by the operator.
+              behavior_id: read-user-input
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-read-user-input-2
+              order: 2
+              type: directional
+              content: Consider utilizing buffered input reading abstractions provided by standard system libraries to handle text line by line efficiently.
+              behavior_id: read-user-input
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-read-user-input-3
+              order: 3
+              type: structural
+              content: Initialize a scanner or reader object linked to standard input, then invoke methods that scan until a newline boundary is encountered.
+              behavior_id: read-user-input
+              reveal_after_attempts: 6
+              spoiler_risk: false
+    - id: level-3-handle-exit-command
+      order: 3
+      milestone_id: repl-loop
+      title: Handle Exit Command
+      goal: Gracefully terminate the shell upon receiving an exit command or EOF.
+      narrative:
+        hook: Your interactive loop can now display prompts and read inputs, but it traps you in an infinite cycle with no way out except force-killing the process.
+        motivation: A robust application must be polite and cooperative, knowing when its work is complete so it can release system resources and return control back to the operating system cleanly.
+        concrete_demo: When an operator types the designated shutdown token or sends an end-of-file signal, the interface acknowledges the request and closes down orderly without raising any errors.
+      difficulty: easy
+      learning_objectives:
+        - Recognize specific exit commands entered into the interaction loop.
+        - Detect end-of-file conditions from standard input streams.
+        - Perform a clean and orderly exit sequence without crashing.
+      constraints:
+        - Must terminate immediately upon receiving the designated exit command.
+        - Must terminate gracefully when reaching end-of-file on input streams.
+        - Do not leave lingering processes or panic on normal termination paths.
+      deliverables:
+        - An interaction loop capable of detecting termination conditions.
+        - A reliable shutdown handler for normal program completion.
+      behaviors:
+        - id: handle-exit-command
+          description: The system detects termination signals or specific exit requests and stops execution cleanly.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Check incoming lines against your designated termination keyword before processing them further.
+            - Inspect the result of your reading mechanism to detect end-of-file or stream closure conditions.
+            - Ensure your loop breaks out of execution cleanly when either termination trigger is encountered.
+        hints:
+            - id: hint-handle-exit-command-1
+              order: 1
+              type: conceptual
+              content: Think about how a loop needs a breaking condition. Beyond normal task execution, you should evaluate every piece of input against a specific sentinel value that signals the end of the session, as well as checking if the input source has closed completely.
+              behavior_id: handle-exit-command
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-handle-exit-command-2
+              order: 2
+              type: directional
+              content: Compare the trimmed user input string with your chosen shutdown keyword inside a conditional statement, and handle the reading error or end-of-file indicator by triggering a break statement to exit the main processing loop.
+              behavior_id: handle-exit-command
+              reveal_after_attempts: 4
+              spoiler_risk: false
+    - id: level-tokenize-input-string
+      order: 4
+      milestone_id: command-parsing
+      title: Tokenize Input String
+      goal: Split a raw user input string into whitespace-separated argument tokens.
+      narrative:
+        hook: Your shell can successfully read a line of text typed by the user, but it still treats the entire line as a single monolithic block of text rather than separate instructions.
+        motivation: To execute commands and pass flags correctly, the shell needs a way to dissect raw input strings into distinct words or arguments so each piece can be analyzed independently.
+        concrete_demo: When a user types a multi-word command line into the interactive prompt, the shell isolates the individual words into an orderly sequence of distinct components for future processing.
+      difficulty: easy
+      learning_objectives:
+        - Understand how to partition a continuous string into discrete components based on whitespace boundaries.
+        - Represent a sequence of textual arguments as a collection of separate string tokens.
+      constraints:
+        - Do not implement command execution or process spawning yet.
+        - Do not handle quoted strings containing spaces in this level.
+        - Rely solely on standard whitespace character boundaries for splitting.
+      deliverables:
+        - A routine or function that takes a raw input string and returns a collection of distinct argument tokens.
+      behaviors:
+        - id: tokenize-input-string
+          description: Splits raw user input strings into individual whitespace-separated argument tokens.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Examine standard string manipulation utilities available in the standard library for splitting text.
+            - Consider how whitespace characters dictate the boundaries between individual argument tokens.
+        hints:
+            - id: hint-tokenize-input-string-1
+              order: 1
+              type: conceptual
+              content: Think about how sentences are read word by word. When scanning text, you look for spaces or tabs that act as natural separators between individual words, allowing you to collect each word into a separate bucket.
+              behavior_id: tokenize-input-string
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-tokenize-input-string-2
+              order: 2
+              type: directional
+              content: Look for built-in string manipulation functions in your target language's standard library that specialize in cutting a continuous text string into slices based on whitespace patterns.
+              behavior_id: tokenize-input-string
+              reveal_after_attempts: 4
+              spoiler_risk: false
+    - id: level-5-command-parsing
+      order: 5
+      milestone_id: command-parsing
+      title: Handle Quoted Arguments
+      goal: Support quoted strings as single arguments containing whitespace.
+      narrative:
+        hook: Your shell successfully breaks input strings apart by whitespace, but it treats spaces inside file names or messages as hard boundaries.
+        motivation: Without recognizing quotes, users cannot pass paths or messages containing spaces, limiting the utility of commands.
+        concrete_demo: When a user provides a phrase enclosed in matching quote characters, the system groups those words together into a single parameter instead of fracturing them into multiple distinct tokens.
+      difficulty: medium
+      learning_objectives:
+        - Recognize single and double quotes during tokenization
+        - Group whitespace-separated terms enclosed in quotes into a single argument
+        - Strip surrounding quote characters from final argument tokens
+      constraints:
+        - Do not split tokens by spaces if they occur inside matching quotes
+        - Ensure unquoted arguments continue to split normally by whitespace
+        - Maintain the exact order of resulting arguments
+      deliverables:
+        - An updated tokenization routine capable of handling quoted substrings
+        - Unit tests verifying single, double, and mixed quote scenarios
+      behaviors:
+        - id: handle-quoted-arguments
+          description: The system correctly parses quoted substrings containing spaces as single distinct arguments while stripping the surrounding quote markers.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Iterate through the character stream while tracking whether you are currently inside a quoted region.
+            - Toggle your quoted state when encountering quote characters, and suppress adding the quote characters themselves to the final token buffer.
+        hints:
+            - id: hint-handle-quoted-arguments-1
+              order: 1
+              type: conceptual
+              content: Think about how text processing requires maintaining state regarding whether space characters should act as separators or be treated as ordinary characters inside a quotation.
+              behavior_id: handle-quoted-arguments
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-handle-quoted-arguments-2
+              order: 2
+              type: directional
+              content: Consider using a boolean flag to track quote state as you process the input character by character or rune by rune.
+              behavior_id: handle-quoted-arguments
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-handle-quoted-arguments-3
+              order: 3
+              type: structural
+              content: Design a parsing loop that accumulates characters into the current token until a whitespace occurs outside of quotes, or until a closing quote is reached.
+              behavior_id: handle-quoted-arguments
+              reveal_after_attempts: 6
+              spoiler_risk: false
+    - id: level-6-process-execution
+      order: 6
+      milestone_id: process-execution
+      title: Spawn Child Process
+      goal: Execute external commands using system binaries and passed arguments.
+      narrative:
+        hook: Our shell can successfully display prompts, read user input, handle exit commands, and parse complex quoted arguments into structured tokens. However, it still cannot actually invoke any external operating system programs or run system binaries.
+        motivation: Without the ability to spawn separate child processes, an interactive command interpreter remains an isolated text parser unable to leverage system utilities. This step bridges our parsed token stream directly to the underlying operating system execution facilities.
+        concrete_demo: When an operator provides an executable name alongside required parameters, the system initiates the requested binary as a distinct child process. This transforms our shell from a static text processor into a functional interface capable of triggering external tools.
+      difficulty: easy
+      learning_objectives:
+        - Understand how an operating system invokes a separate external executable from a parent program.
+        - Pass a command name and argument list to the process creation runtime interface.
+      constraints:
+        - Do not implement process completion waiting mechanisms in this level.
+        - Do not implement error handling for command-not-found failures in this level.
+      deliverables:
+        - A function or routine that accepts a binary name and arguments, and initiates a child process execution.
+      behaviors:
+        - id: spawn-child-process
+          description: Spawns an external system process using the provided command and arguments.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Utilize the standard system process creation API provided by the runtime environment.
+            - Separate the executable name from its parameter slice before invoking the process launcher.
+        hints:
+            - id: hint-spawn-child-process-1
+              order: 1
+              type: conceptual
+              content: Operating systems maintain a distinction between the current program and external binaries stored on disk. To run an external program, the parent application must issue a system request specifying the target executable along with any configuration parameters.
+              behavior_id: spawn-child-process
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-spawn-child-process-2
+              order: 2
+              type: directional
+              content: Look for standard runtime library functions dedicated to command execution. You will want to pass your first token as the command identifier and any subsequent tokens as the argument parameters.
+              behavior_id: spawn-child-process
+              reveal_after_attempts: 4
+              spoiler_risk: false
+    - id: level-wait-for-process-completion
+      order: 7
+      milestone_id: process-execution
+      title: Wait for Process Completion
+      goal: Block the shell until the spawned child process finishes execution.
+      narrative:
+        hook: Previously, our shell could successfully launch external commands as child processes, but it immediately raced ahead without waiting for them to finish.
+        motivation: Without process synchronization, commands overlap chaotically, making interactive shell usage unpredictable and impossible to manage.
+        concrete_demo: When executing a command that takes a moment to run, the shell now patiently pauses all further input handling until the external program completely finishes its work.
+      difficulty: medium
+      learning_objectives:
+        - Understand synchronous execution and process synchronization.
+        - Learn how parent processes block while waiting for child process termination.
+        - Observe exit status collection after child process completion.
+      constraints:
+        - Do not return control to the prompt before the child process terminates.
+        - Ensure child process execution results are properly handled.
+        - Do not introduce asynchronous execution loops.
+      deliverables:
+        - A mechanism that pauses shell execution until the active child process exits.
+        - Proper handling of process termination signals or status codes.
+      behaviors:
+        - id: wait-for-process-completion
+          description: The shell blocks and waits for the spawned child process to finish before accepting new input.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - After spawning the child process handle, invoke the runtime wait operation on that handle.
+            - Capture any returned exit status or error indicators to ensure the child process finished cleanly.
+        hints:
+            - id: hint-wait-for-process-completion-1
+              order: 1
+              type: conceptual
+              content: When a parent process spawns a child, the operating system keeps track of the child's lifecycle. The parent must explicitly request to block execution until the child's state changes to terminated.
+              behavior_id: wait-for-process-completion
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-wait-for-process-completion-2
+              order: 2
+              type: directional
+              content: Look for the method or function associated with the process handle that blocks until the underlying operating system process finishes execution.
+              behavior_id: wait-for-process-completion
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-wait-for-process-completion-3
+              order: 3
+              type: structural
+              content: Invoke the blocking call immediately after starting the command structure, checking its return values to ensure the command finished successfully.
+              behavior_id: wait-for-process-completion
+              reveal_after_attempts: 6
+              spoiler_risk: false
+    - id: level-8
+      order: 8
+      milestone_id: process-execution
+      title: Handle Execution Errors
+      goal: Gracefully handle command-not-found and execution failures without crashing.
+      narrative:
+        hook: Your shell can successfully spawn and wait for child processes, but typing a non-existent command causes it to crash abruptly.
+        motivation: A robust interactive environment must protect itself against user typos and missing binaries instead of terminating unexpectedly.
+        concrete_demo: When an invalid program name is provided by the user, the application prints a clear diagnostic message and immediately displays a fresh prompt ready for the next instruction.
+      difficulty: hard
+      learning_objectives:
+        - Detect when an external command fails to execute or cannot be found.
+        - Report execution errors cleanly to the standard error stream.
+        - Ensure the shell process continues running despite invalid commands.
+      constraints:
+        - Do not terminate the shell when encountering invalid commands.
+        - Output informative messages for missing or failing programs.
+        - Preserve previous process spawning and waiting capabilities.
+      deliverables:
+        - Error handling logic for failed child process execution.
+        - Integration tests verifying resilient shell behavior.
+      behaviors:
+        - id: handle-execution-errors
+          description: Intercept execution failures and report them cleanly without terminating the parent process.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Inspect the result returned when launching or waiting on the child process.
+            - Check for system-level errors indicating that the binary could not be found or executed.
+            - Write the error message to standard error rather than standard output.
+        hints:
+            - id: hint-handle-execution-errors-1
+              order: 1
+              type: conceptual
+              content: Consider what happens in an operating system when you request execution of a program that does not exist on disk.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-handle-execution-errors-2
+              order: 2
+              type: directional
+              content: Check the return values of the process invocation step to determine if an error occurred before attempting to wait.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-handle-execution-errors-3
+              order: 3
+              type: structural
+              content: Use conditional statements to branch your logic depending on whether the execution returned a non-nil error object.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 6
+              spoiler_risk: false
+            - id: hint-handle-execution-errors-4
+              order: 4
+              type: partial_impl
+              content: |-
+                if err != nil {
+                    fmt.Fprintln(os.Stderr, "error:", err)
+                    // continue prompt loop
+                }
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 8
+              spoiler_risk: true
+            - id: hint-handle-execution-errors-5
+              order: 5
+              type: near_solution
+              content: Capture the error from the process starter, print it appropriately to standard error, and ensure your main command loop does not break out of execution.
+              behavior_id: handle-execution-errors
+              reveal_after_attempts: 10
+              spoiler_risk: true
+    - id: level-implement-cd-command
+      order: 9
+      milestone_id: built-in-commands
+      title: Implement CD Command
+      goal: Change the current working directory of premium shell process directly.
+      narrative:
+        hook: Your shell can execute external programs and wait for them to finish, but every command runs inside its own isolated child process.
+        motivation: If you try to change directories using an external program, only that temporary child process updates its location while your main shell stays completely stationary.
+        concrete_demo: Typing a directory-navigation instruction needs to update the active environment of your main process so that subsequent inputs execute inside the newly selected folder.
+      difficulty: easy
+      learning_objectives:
+        - Understand how a process maintains its working directory as part of its execution state.
+        - Recognize why directory-changing instructions must be handled internally instead of spawning external binaries.
+        - Learn how to invoke the system facility that updates the current working directory.
+      constraints:
+        - Must not spawn an external child process for the directory change instruction.
+        - Must modify the execution state of the current shell process directly.
+        - Must handle standard path arguments correctly.
+      deliverables:
+        - An internal directory-updating routine that modifies the current working directory state.
+      behaviors:
+        - id: implement-cd-command
+          description: The shell intercepts directory-change instructions and updates its working directory state directly.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Check whether the requested instruction matches the directory-change identifier.
+            - Retrieve the target path parameter passed alongside the instruction.
+            - Invoke the standard runtime facility responsible for updating the current working directory.
+        hints:
+            - id: hint-implement-cd-command-1
+              order: 1
+              type: conceptual
+              content: Remember that a process working directory is a state attribute of the running program itself. External tools cannot modify the parent process state.
+              behavior_id: implement-cd-command
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-implement-cd-command-2
+              order: 2
+              type: directional
+              content: Look for operating system APIs or standard library functions designed to modify the working directory and handle any returned status errors.
+              behavior_id: implement-cd-command
+              reveal_after_attempts: 4
+              spoiler_risk: false
+    - id: level-10-built-in-commands
+      order: 10
+      milestone_id: built-in-commands
+      title: Dispatch Built-ins
+      goal: Route recognized command names to built-in handlers instead of external execution.
+      narrative:
+        hook: Your environment can successfully tokenize inputs and launch external system processes, but every single command is currently treated as an external binary lookup.
+        motivation: Executing internal state modifications through external processes is inefficient and fails to alter the persistent shell environment. Intercepting specific commands directly allows the shell to manage its own operations cleanly.
+        concrete_demo: When a user types a recognized control word, the shell intercepts it internally and performs the required action directly, bypassing external process creation entirely.
+      difficulty: medium
+      learning_objectives:
+        - Understand how to intercept specific command names before initiating external process lookups.
+        - Design a routing mechanism to check input tokens against a set of internal command names.
+        - Ensure unmatched commands correctly fall through to external process execution paths.
+      constraints:
+        - Must verify command names against registered built-in identifiers prior to any system execution calls.
+        - Must preserve all existing input tokenization and parsing behavior from previous levels.
+        - Must remain completely language-agnostic in all shared definitions.
+      deliverables:
+        - A command router module that intercepts known built-in names.
+        - Integration of the router within the main execution loop to branch between internal handlers and external processes.
+      behaviors:
+        - id: dispatch-builtins
+          description: Examine parsed command tokens and dispatch recognized identifiers to internal handlers instead of launching external processes.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Examine the first element of the parsed argument tokens before attempting any external process spawn calls.
+            - Maintain a lookup mechanism or conditional check to match the command name against known built-in identifiers.
+            - If a match is found, invoke the corresponding internal function; otherwise, proceed with the standard external execution pipeline.
+        hints:
+            - id: hint-dispatch-builtins-1
+              order: 1
+              type: conceptual
+              content: Think about how you can intercept a command before it reaches the external process execution stage by checking the command name against a predefined set of known names.
+              behavior_id: dispatch-builtins
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-dispatch-builtins-2
+              order: 2
+              type: directional
+              content: Consider adding a conditional branch right after tokenizing input to check if the primary token matches any internal command identifier.
+              behavior_id: dispatch-builtins
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-dispatch-builtins-3
+              order: 3
+              type: structural
+              content: Implement a dedicated routing function that accepts the tokenized arguments, inspects the command name, and returns a boolean or status indicating whether an internal handler was executed.
+              behavior_id: dispatch-builtins
+              reveal_after_attempts: 6
+              spoiler_risk: false
+    - id: level-11-parse-redirection-operators
+      order: 11
+      milestone_id: input-output-redirection
+      title: Parse Redirection Operators
+      goal: Detect redirection symbols like output redirection and file targets from tokens.
+      narrative:
+        hook: Your shell successfully executes external commands and built-in routines with arguments, but output always streams directly to the terminal screen.
+        motivation: Without recognizing redirection symbols, users cannot save program outputs to files or load initial data from saved documents.
+        concrete_demo: Imagine typing a command followed by a special symbol and a filename, allowing the parser to separate the command instruction from the file destination.
+      difficulty: easy
+      learning_objectives:
+        - Identify specific redirection symbols within a sequence of command tokens
+        - Separate command arguments from stream redirection targets
+        - Extract target filenames associated with redirection operators
+      constraints:
+        - Do not execute or apply file redirections to streams yet
+        - Preserve normal argument ordering before and after redirection operators
+        - Handle malformed or missing redirection targets safely
+      deliverables:
+        - A parsing function that identifies redirection operators and their associated file targets from argument tokens
+      behaviors:
+        - id: parse-redirection-operators
+          description: Examine token streams to identify redirection symbols and isolate target filenames from regular command arguments.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Iterate through the slice of argument tokens looking for specific stream redirection symbols like greater-than or less-than characters.
+            - When a redirection operator is found, capture the immediately following token as the target filename.
+            - Ensure the returned command arguments exclude the redirection operator and target filename so downstream execution remains unaffected.
+        hints:
+            - id: hint-parse-redirection-operators-1
+              order: 1
+              type: conceptual
+              content: Think about scanning through the list of argument words one by one. When you encounter a specific symbol representing stream redirection, the word immediately following it represents the file destination rather than a command argument.
+              behavior_id: parse-redirection-operators
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-parse-redirection-operators-2
+              order: 2
+              type: directional
+              content: Consider looping through your token slice with an index variable. Upon finding a redirection token, extract the next index item as the target file, and store remaining tokens in a separate collection for the command arguments.
+              behavior_id: parse-redirection-operators
+              reveal_after_attempts: 4
+              spoiler_risk: false
+    - id: level-12-input-output-redirection
+      order: 12
+      milestone_id: input-output-redirection
+      title: Apply File Redirection
+      goal: Configure standard streams to read from or write to specified files before execution.
+      narrative:
+        hook: Your shell can successfully parse redirection operators from command tokens, but it still prints everything to the terminal and waits for interactive keyboard input.
+        motivation: Without connecting these stream instructions to actual file operations, users cannot save output logs or feed file contents into automated data processing pipelines.
+        concrete_demo: Imagine running a command that generates system stats and instantly saving those results into a persistent text file for later review, freeing your screen from text clutter.
+      difficulty: medium
+      learning_objectives:
+        - Understand how to configure standard input and output streams for process execution using specified file targets.
+        - Ensure standard streams are properly connected to target files before executing external commands.
+      constraints:
+        - Do not alter the behavior of commands when no redirection operators are provided.
+        - Handle file opening errors gracefully without crashing the shell process.
+      deliverables:
+        - A mechanism to route standard streams to and from specified files during command execution.
+      behaviors:
+        - id: apply-file-redirection
+          description: Configure standard input and standard output streams to use designated file descriptors or targets before launching commands.
+      tests: []
+      unlock_policy:
+        require_all_current_tests: true
+        require_all_previous_tests: true
+        allow_level_skipping: false
+      primary_guidance:
+        implementation_guidance:
+            - Inspect the parsed tokens for redirection operators and their corresponding target file paths before spawning process execution.
+            - Configure standard stream attributes on the process configuration structure to point to opened file handles.
+        hints:
+            - id: hint-apply-file-redirection-1
+              order: 1
+              type: conceptual
+              content: Standard streams act as channels for data transfer. Redirection means changing where these channels point so that data flows to or from a file instead of the default console streams.
+              behavior_id: apply-file-redirection
+              reveal_after_attempts: 2
+              spoiler_risk: false
+            - id: hint-apply-file-redirection-2
+              order: 2
+              type: directional
+              content: Look at how process execution attributes are initialized. Before launching the command, inspect if a redirection target was specified and open the file accordingly to assign its descriptor to the standard stream.
+              behavior_id: apply-file-redirection
+              reveal_after_attempts: 4
+              spoiler_risk: false
+            - id: hint-apply-file-redirection-3
+              order: 3
+              type: structural
+              content: Establish conditional checks right before process creation to assign standard input or output fields to opened file instances when redirection flags are active.
+              behavior_id: apply-file-redirection
+              reveal_after_attempts: 6
+              spoiler_risk: false

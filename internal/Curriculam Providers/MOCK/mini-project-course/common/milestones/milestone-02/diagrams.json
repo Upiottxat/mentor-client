@@ -1,0 +1,11 @@
+{
+  "milestone_id": "command-parsing",
+  "diagrams": [
+    {
+      "id": "diag-tokenization",
+      "title": "Tokenization Pipeline",
+      "format": "mermaid",
+      "content": "graph TD\nRaw_Input[Raw Input String] --\u003e Whitespace_Splitter[Whitespace Splitter]\nWhitespace_Splitter --\u003e Token_A[Command Token]\nWhitespace_Splitter --\u003e Token_B[Argument 1]\nWhitespace_Splitter --\u003e Token_C[Argument 2]"
+    }
+  ]
+}

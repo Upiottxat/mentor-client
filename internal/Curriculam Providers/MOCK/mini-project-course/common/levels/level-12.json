@@ -1,0 +1,169 @@
+{
+  "id": "level-12-input-output-redirection",
+  "order": 12,
+  "milestone_id": "input-output-redirection",
+  "title": "Apply File Redirection",
+  "goal": "Configure standard streams to read from or write to specified files before execution.",
+  "narrative": {
+    "hook": "Your shell can successfully parse redirection operators from command tokens, but it still prints everything to the terminal and waits for interactive keyboard input.",
+    "motivation": "Without connecting these stream instructions to actual file operations, users cannot save output logs or feed file contents into automated data processing pipelines.",
+    "concrete_demo": "Imagine running a command that generates system stats and instantly saving those results into a persistent text file for later review, freeing your screen from text clutter."
+  },
+  "difficulty": "medium",
+  "status": "development",
+  "learning_objectives": [
+    "Understand how to configure standard input and output streams for process execution using specified file targets.",
+    "Ensure standard streams are properly connected to target files before executing external commands."
+  ],
+  "constraints": [
+    "Do not alter the behavior of commands when no redirection operators are provided.",
+    "Handle file opening errors gracefully without crashing the shell process."
+  ],
+  "deliverables": [
+    "A mechanism to route standard streams to and from specified files during command execution."
+  ],
+  "behaviors": [
+    {
+      "id": "apply-file-redirection",
+      "description": "Configure standard input and standard output streams to use designated file descriptors or targets before launching commands."
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-apply-file-redirection-normal-output",
+      "behavior_ids": [
+        "apply-file-redirection"
+      ],
+      "category": "functional",
+      "case_type": "normal",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verifies that standard output can be saved to a file target correctly.",
+      "expected_behavior": "Command output is successfully written into the designated target file instead of the console.",
+      "io": {
+        "stdin": "echo hello \u003e output.txt\n",
+        "expected": "",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-apply-file-redirection-normal-input",
+      "behavior_ids": [
+        "apply-file-redirection"
+      ],
+      "category": "functional",
+      "case_type": "normal",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verifies that standard input can be loaded from a file target correctly.",
+      "expected_behavior": "Command reads its standard input from the specified source file instead of the terminal.",
+      "io": {
+        "stdin": "cat \u003c input.txt\n",
+        "expected": "content\n",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-apply-file-redirection-edge-invalid-file",
+      "behavior_ids": [
+        "apply-file-redirection"
+      ],
+      "category": "unit",
+      "case_type": "edge",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verifies correct handling of non-existent files during stream redirection setup.",
+      "expected_behavior": "The shell catches the file access error, reports an appropriate message, and avoids crashing.",
+      "io": {
+        "stdin": "cat \u003c nonexistent_file_xyz.txt\n",
+        "expected": "",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-apply-file-redirection-oracle-dynamic",
+      "behavior_ids": [
+        "apply-file-redirection"
+      ],
+      "category": "integration",
+      "case_type": "normal",
+      "kind": "dynamic_oracle",
+      "run_on": "submit_only",
+      "description": "Performs dynamic validation of stream redirection under varied runtime inputs.",
+      "expected_behavior": "Ensures streams are correctly configured across diverse file names and operational conditions.",
+      "io": {
+        "stdin": "echo dynamic_test \u003e dynamic_out.txt\n",
+        "expected": "",
+        "matcher": "exact"
+      }
+    }
+  ],
+  "unlock_policy": {
+    "require_all_current_tests": true,
+    "require_all_previous_tests": true,
+    "allow_level_skipping": false
+  },
+  "agnostic_test_spec": {
+    "level_id": "level-12-input-output-redirection",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-apply-file-redirection-normal-output",
+        "description": "Verifies that standard output can be saved to a file target correctly.",
+        "expected_behavior": "Command output is successfully written into the designated target file instead of the console.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "echo hello \u003e output.txt\n",
+        "expected": "",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-apply-file-redirection-normal-input",
+        "description": "Verifies that standard input can be loaded from a file target correctly.",
+        "expected_behavior": "Command reads its standard input from the specified source file instead of the terminal.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "cat \u003c input.txt\n",
+        "expected": "content\n",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-apply-file-redirection-edge-invalid-file",
+        "description": "Verifies correct handling of non-existent files during stream redirection setup.",
+        "expected_behavior": "The shell catches the file access error, reports an appropriate message, and avoids crashing.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "cat \u003c nonexistent_file_xyz.txt\n",
+        "expected": "",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-apply-file-redirection-oracle-dynamic",
+        "description": "Performs dynamic validation of stream redirection under varied runtime inputs.",
+        "expected_behavior": "Ensures streams are correctly configured across diverse file names and operational conditions.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "stdin": "echo dynamic_test \u003e dynamic_out.txt\n",
+        "expected": "",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-apply-file-redirection-normal-output",
+      "test-apply-file-redirection-normal-input",
+      "test-apply-file-redirection-edge-invalid-file",
+      "test-apply-file-redirection-oracle-dynamic"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "go.mod": "module simpleshell\n\ngo 1.18",
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"os/exec\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tline, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t\tline = strings.TrimSpace(line)\n\t\tif line == \"\" {\n\t\t\tcontinue\n\t\t}\n\n\t\targs := parseArgs(line)\n\t\tif len(args) == 0 {\n\t\t\tcontinue\n\t\t}\n\n\t\tvar cmdArgs []string\n\t\tvar inputFile string\n\t\tvar outputFile string\n\t\tvar appendOutput bool\n\n\t\tfor i := 0; i \u003c len(args); i++ {\n\t\t\tif args[i] == \"\u003c\" \u0026\u0026 i+1 \u003c len(args) {\n\t\t\t\tinputFile = args[i+1]\n\t\t\t\ti++\n\t\t\t} else if args[i] == \"\u003e\" \u0026\u0026 i+1 \u003c len(args) {\n\t\t\t\toutputFile = args[i+1]\n\t\t\t\tappendOutput = false\n\t\t\t\ti++\n\t\t\t} else if args[i] == \"\u003e\u003e\" \u0026\u0026 i+1 \u003c len(args) {\n\t\t\t\toutputFile = args[i+1]\n\t\t\t\tappendOutput = true\n\t\t\t\ti++\n\t\t\t} else {\n\t\t\t\tcmdArgs = append(cmdArgs, args[i])\n\t\t\t}\n\t\t}\n\n\t\tif len(cmdArgs) == 0 {\n\t\t\tcontinue\n\t\t}\n\n\t\tcmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)\n\n\t\tif inputFile != \"\" {\n\t\t\tfile, err := os.Open(inputFile)\n\t\t\tif err != nil {\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tdefer file.Close()\n\t\t\tcmd.Stdin = file\n\t\t} else {\n\t\t\tcmd.Stdin = os.Stdin\n\t\t}\n\n\t\tif outputFile != \"\" {\n\t\t\tflags := os.O_CREATE | os.O_WRONLY\n\t\t\tif appendOutput {\n\t\t\t\tflags |= os.O_APPEND\n\t\t\t} else {\n\t\t\t\tflags |= os.O_TRUNC\n\t\t\t}\n\t\t\tfile, err := os.OpenFile(outputFile, flags, 0644)\n\t\t\tif err != nil {\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tdefer file.Close()\n\t\t\tcmd.Stdout = file\n\t\t} else {\n\t\t\tcmd.Stdout = os.Stdout\n\t\t}\n\n\t\tcmd.Stderr = os.Stderr\n\t\t_ = cmd.Run()\n\t}\n}\n\nfunc parseArgs(input string) []string {\n\tvar args []string\n\tvar current strings.Builder\n\tinQuotes := false\n\n\tfor _, r := range input {\n\t\tif r == '\"' {\n\t\t\tinQuotes = !inQuotes\n\t\t} else if r == ' ' \u0026\u0026 !inQuotes {\n\t\t\tif current.Len() \u003e 0 {\n\t\t\t\targs = append(args, current.String())\n\t\t\t\tcurrent.Reset()\n\t\t\t}\n\t\t} else {\n\t\t\tcurrent.WriteRune(r)\n\t\t}\n\t}\n\tif current.Len() \u003e 0 {\n\t\targs = append(args, current.String())\n\t}\n\treturn args\n}\n"
+    }
+  },
+  "verified": false
+}

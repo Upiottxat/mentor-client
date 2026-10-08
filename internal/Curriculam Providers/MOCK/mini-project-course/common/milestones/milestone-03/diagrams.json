@@ -1,0 +1,11 @@
+{
+  "milestone_id": "process-execution",
+  "diagrams": [
+    {
+      "id": "diag-process-lifecycle",
+      "title": "Process Execution Lifecycle",
+      "format": "mermaid",
+      "content": "sequenceDiagram\n  autonumber\n  Shell-\u003e\u003eKernel: Spawn Child Process\n  Note over Kernel: Allocate resources and load binary\n  Kernel--\u003e\u003eShell: Return Process Handle\n  Shell-\u003e\u003eKernel: Wait for Completion\n  Note over Kernel,Child: Child runs task\n  Child--\u003e\u003eKernel: Exit with Status\n  Kernel--\u003e\u003eShell: Unblock and Return Status"
+    }
+  ]
+}

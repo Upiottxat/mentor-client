@@ -1,0 +1,50 @@
+milestone_id: command-parsing
+questions:
+    - id: q-1
+      level_id: level-tokenize-input-string
+      question: When implementing simple whitespace-based tokenization in this language, which standard library function or package is most idiomatic for splitting a command string?
+      options:
+        - os.SplitString
+        - strings.Fields
+        - bufio.ScanLines
+        - bytes.Split
+      placement:
+        capability_ids:
+            - tokenize-input-string
+            - handle-quoted-arguments
+        behavior_ids:
+            - tokenize-input-string
+        introduced_at_level_id: level-tokenize-input-string
+        difficulty: easy
+    - id: q-2
+      level_id: level-5-command-parsing
+      question: What is the primary operational challenge when introducing quoted arguments (e.g., single or double quotes) into a shell command tokenizer?
+      options:
+        - Memory allocation overhead increases significantly
+        - Go's string type becomes mutable
+        - Whitespace characters within quotes must not act as token delimiters
+        - Command names can no longer be the first token
+      placement:
+        capability_ids:
+            - tokenize-input-string
+            - handle-quoted-arguments
+        behavior_ids:
+            - handle-quoted-arguments
+        introduced_at_level_id: level-5-command-parsing
+        difficulty: medium
+    - id: q-3
+      level_id: level-tokenize-input-string
+      question: How should a robust shell parser handle consecutive whitespace characters (e.g., multiple spaces or tabs) between command arguments when no quotes are present?
+      options:
+        - They should be treated as a single delimiter and ignored, producing no empty tokens
+        - They must throw a syntax error immediately
+        - Each space must generate a distinct empty string token
+        - They should be converted into escape characters
+      placement:
+        capability_ids:
+            - tokenize-input-string
+            - handle-quoted-arguments
+        behavior_ids:
+            - tokenize-input-string
+        introduced_at_level_id: level-tokenize-input-string
+        difficulty: easy

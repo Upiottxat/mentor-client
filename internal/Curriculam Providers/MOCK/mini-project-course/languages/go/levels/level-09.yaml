@@ -1,0 +1,25 @@
+level_id: level-implement-cd-command
+order: 9
+milestone_id: built-in-commands
+language: go
+build:
+    required: true
+implementation_guidance:
+    - Check whether the requested instruction matches the directory-change identifier.
+    - Retrieve the target path parameter passed alongside the instruction.
+    - Invoke the standard runtime facility responsible for updating the current working directory.
+hints:
+    - id: hint-implement-cd-command-1
+      order: 1
+      type: conceptual
+      content: Remember that a process working directory is a state attribute of the running program itself. External tools cannot modify the parent process state.
+      behavior_id: implement-cd-command
+      reveal_after_attempts: 2
+      spoiler_risk: false
+    - id: hint-implement-cd-command-2
+      order: 2
+      type: directional
+      content: Look for operating system APIs or standard library functions designed to modify the working directory and handle any returned status errors.
+      behavior_id: implement-cd-command
+      reveal_after_attempts: 4
+      spoiler_risk: false

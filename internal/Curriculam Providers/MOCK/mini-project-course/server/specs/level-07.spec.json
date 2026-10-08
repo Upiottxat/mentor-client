@@ -1,0 +1,76 @@
+{
+  "level_id": "level-wait-for-process-completion",
+  "order": 7,
+  "agnostic_test_spec": {
+    "level_id": "level-wait-for-process-completion",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-wait-process-normal-1",
+        "description": "Verifies that executing a short-lived external utility blocks the shell until completion.",
+        "expected_behavior": "The shell pauses execution until the external command exits successfully.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "echo",
+          "completed"
+        ],
+        "expected": "completed",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-wait-process-normal-2",
+        "description": "Verifies correct synchronization when running sequential commands.",
+        "expected_behavior": "Each command runs to completion before the shell proceeds.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "printf",
+          "line1\\nline2"
+        ],
+        "expected": "line1\nline2",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-wait-process-edge-1",
+        "description": "Verifies synchronization behavior when handling empty or minimal output execution.",
+        "expected_behavior": "The shell waits for the process even when standard output is empty.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "true"
+        ],
+        "expected": "",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-wait-process-oracle-1",
+        "description": "Fuzzed verification of process completion waiting behavior.",
+        "expected_behavior": "Shell correctly blocks and captures termination status for variable workload utilities.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "args": [
+          "echo",
+          "oracle_ok"
+        ],
+        "expected": "oracle_ok",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-wait-process-normal-1",
+      "test-wait-process-normal-2",
+      "test-wait-process-edge-1",
+      "test-wait-process-oracle-1"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"os/exec\"\n\t\"strings\"\n)\n\nfunc main() {\n\targs := os.Args[1:]\n\tif len(args) == 0 {\n\t\treader := bufio.NewReader(os.Stdin)\n\t\tfor {\n\t\t\tfmt.Print(\"\u003e \")\n\t\t\ttext, err := reader.ReadString('\\n')\n\t\t\tif err != nil {\n\t\t\t\tbreak\n\t\t\t}\n\t\t\ttext = strings.TrimSpace(text)\n\t\t\tif text == \"\" {\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tif text == \"exit\" {\n\t\t\t\tbreak\n\t\t\t}\n\t\t\tcmdParts := strings.Fields(text)\n\t\t\tcmd := exec.Command(cmdParts[0], cmdParts[1:]...)\n\t\t\tcmd.Stdout = os.Stdout\n\t\t\tcmd.Stderr = os.Stderr\n\t\t\terr = cmd.Run()\n\t\t\tif err != nil {\n\t\t\t\t// ignore error for simplicity\n\t\t\t}\n\t\t}\n\t} else {\n\t\tcmd := exec.Command(args[0], args[1:]...)\n\t\tcmd.Stdout = os.Stdout\n\t\tcmd.Stderr = os.Stderr\n\t\terr := cmd.Run()\n\t\tif err != nil {\n\t\t\tos.Exit(1)\n\t\t}\n\t}\n}"
+    }
+  }
+}

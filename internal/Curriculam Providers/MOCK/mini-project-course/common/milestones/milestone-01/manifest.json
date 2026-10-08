@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "milestone_id": "repl-loop",
+  "order": 1,
+  "artifacts": {
+    "overview": "overview.json",
+    "theory": "theory.json",
+    "questions": "questions.json",
+    "challenges": "challenges.json",
+    "diagrams": "diagrams.json",
+    "interactives": "interactives.json"
+  },
+  "language_artifacts": {
+    "go": {
+      "reference": "reference.json",
+      "examples": "examples.json",
+      "interactives": "interactives.json"
+    }
+  },
+  "server_artifacts": {
+    "solutions": "document-solutions.json",
+    "bossfight_contract": "milestone-01.bossfight.json"
+  },
+  "learning_path": [
+    {
+      "level_id": "display-shell-prompt-level",
+      "unlocks": {
+        "theory": [
+          "sec-prompt"
+        ],
+        "questions": [
+          "q-1"
+        ],
+        "challenges": [
+          "ch-1"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    },
+    {
+      "level_id": "level-2-read-user-input",
+      "unlocks": {
+        "theory": [
+          "sec-read"
+        ],
+        "questions": [
+          "q-2"
+        ],
+        "challenges": [
+          "ch-2"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    },
+    {
+      "level_id": "level-3-handle-exit-command",
+      "unlocks": {
+        "theory": [
+          "sec-exit"
+        ],
+        "questions": [
+          "q-3"
+        ],
+        "challenges": [
+          "ch-3"
+        ],
+        "diagrams": null,
+        "interactives": null
+      }
+    }
+  ]
+}

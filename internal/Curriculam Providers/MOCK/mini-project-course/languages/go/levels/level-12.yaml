@@ -1,0 +1,31 @@
+level_id: level-12-input-output-redirection
+order: 12
+milestone_id: input-output-redirection
+language: go
+build:
+    required: true
+implementation_guidance:
+    - Inspect the parsed tokens for redirection operators and their corresponding target file paths before spawning process execution.
+    - Configure standard stream attributes on the process configuration structure to point to opened file handles.
+hints:
+    - id: hint-apply-file-redirection-1
+      order: 1
+      type: conceptual
+      content: Standard streams act as channels for data transfer. Redirection means changing where these channels point so that data flows to or from a file instead of the default console streams.
+      behavior_id: apply-file-redirection
+      reveal_after_attempts: 2
+      spoiler_risk: false
+    - id: hint-apply-file-redirection-2
+      order: 2
+      type: directional
+      content: Look at how process execution attributes are initialized. Before launching the command, inspect if a redirection target was specified and open the file accordingly to assign its descriptor to the standard stream.
+      behavior_id: apply-file-redirection
+      reveal_after_attempts: 4
+      spoiler_risk: false
+    - id: hint-apply-file-redirection-3
+      order: 3
+      type: structural
+      content: Establish conditional checks right before process creation to assign standard input or output fields to opened file instances when redirection flags are active.
+      behavior_id: apply-file-redirection
+      reveal_after_attempts: 6
+      spoiler_risk: false

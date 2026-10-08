@@ -1,0 +1,49 @@
+schema_version: 1
+milestone_id: process-execution
+order: 3
+artifacts:
+    overview: overview.yaml
+    theory: theory.yaml
+    questions: questions.yaml
+    challenges: challenges.yaml
+    diagrams: diagrams.yaml
+    interactives: interactives.yaml
+language_artifacts:
+    go:
+        reference: reference.yaml
+        examples: examples.yaml
+        interactives: interactives.yaml
+server_artifacts:
+    solutions: document-solutions.yaml
+    bossfight_contract: milestone-03.bossfight.yaml
+learning_path:
+    - level_id: level-6-process-execution
+      unlocks:
+        theory:
+            - sec-spawn-child
+        questions:
+            - q-1
+        challenges:
+            - ch-spawn-command
+        diagrams: []
+        interactives: []
+    - level_id: level-wait-for-process-completion
+      unlocks:
+        theory:
+            - sec-wait-completion
+        questions:
+            - q-2
+        challenges:
+            - ch-wait-process
+        diagrams: []
+        interactives: []
+    - level_id: level-8
+      unlocks:
+        theory:
+            - sec-error-handling
+        questions:
+            - q-3
+        challenges:
+            - ch-handle-errors
+        diagrams: []
+        interactives: []

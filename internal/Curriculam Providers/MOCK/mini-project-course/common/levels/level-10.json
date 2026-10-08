@@ -1,0 +1,172 @@
+{
+  "id": "level-10-built-in-commands",
+  "order": 10,
+  "milestone_id": "built-in-commands",
+  "title": "Dispatch Built-ins",
+  "goal": "Route recognized command names to built-in handlers instead of external execution.",
+  "narrative": {
+    "hook": "Your environment can successfully tokenize inputs and launch external system processes, but every single command is currently treated as an external binary lookup.",
+    "motivation": "Executing internal state modifications through external processes is inefficient and fails to alter the persistent shell environment. Intercepting specific commands directly allows the shell to manage its own operations cleanly.",
+    "concrete_demo": "When a user types a recognized control word, the shell intercepts it internally and performs the required action directly, bypassing external process creation entirely."
+  },
+  "difficulty": "medium",
+  "status": "development",
+  "learning_objectives": [
+    "Understand how to intercept specific command names before initiating external process lookups.",
+    "Design a routing mechanism to check input tokens against a set of internal command names.",
+    "Ensure unmatched commands correctly fall through to external process execution paths."
+  ],
+  "constraints": [
+    "Must verify command names against registered built-in identifiers prior to any system execution calls.",
+    "Must preserve all existing input tokenization and parsing behavior from previous levels.",
+    "Must remain completely language-agnostic in all shared definitions."
+  ],
+  "deliverables": [
+    "A command router module that intercepts known built-in names.",
+    "Integration of the router within the main execution loop to branch between internal handlers and external processes."
+  ],
+  "behaviors": [
+    {
+      "id": "dispatch-builtins",
+      "description": "Examine parsed command tokens and dispatch recognized identifiers to internal handlers instead of launching external processes."
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-dispatch-builtins-normal-1",
+      "behavior_ids": [
+        "dispatch-builtins"
+      ],
+      "category": "unit",
+      "case_type": "normal",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verify normal routing of a recognized internal command.",
+      "expected_behavior": "The system intercepts the command and executes the internal handler.",
+      "io": {
+        "stdin": "builtin_command\n",
+        "expected": "internal_handled",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-dispatch-builtins-fallback-1",
+      "behavior_ids": [
+        "dispatch-builtins",
+        "spawn-child-process"
+      ],
+      "category": "functional",
+      "case_type": "normal",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verify fallback behavior for unrecognized command names.",
+      "expected_behavior": "Unrecognized commands bypass the router and attempt external process execution.",
+      "io": {
+        "stdin": "external_command\n",
+        "expected": "external_executed",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-dispatch-builtins-edge-1",
+      "behavior_ids": [
+        "dispatch-builtins"
+      ],
+      "category": "unit",
+      "case_type": "edge",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verify handling of empty or blank input lines during routing evaluation.",
+      "expected_behavior": "Empty input strings are safely ignored without triggering errors or false matches.",
+      "io": {
+        "stdin": "\n",
+        "expected": "",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-dispatch-builtins-oracle-1",
+      "behavior_ids": [
+        "dispatch-builtins"
+      ],
+      "category": "integration",
+      "case_type": "normal",
+      "kind": "dynamic_oracle",
+      "run_on": "submit_only",
+      "description": "Verify dynamic routing consistency across varied input sequences.",
+      "expected_behavior": "The command router correctly distinguishes internal commands from external binaries across randomized execution sequences.",
+      "io": {
+        "stdin": "builtin_command\nexternal_command\n",
+        "expected": "oracle_verified",
+        "matcher": "exact"
+      }
+    }
+  ],
+  "unlock_policy": {
+    "require_all_current_tests": true,
+    "require_all_previous_tests": true,
+    "allow_level_skipping": false
+  },
+  "agnostic_test_spec": {
+    "level_id": "level-10-built-in-commands",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-dispatch-builtins-normal-1",
+        "description": "Verify normal routing of a recognized internal command.",
+        "expected_behavior": "The system intercepts the command and executes the internal handler.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "builtin_command\n",
+        "expected": "internal_handled",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-dispatch-builtins-fallback-1",
+        "description": "Verify fallback behavior for unrecognized command names.",
+        "expected_behavior": "Unrecognized commands bypass the router and attempt external process execution.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "external_command\n",
+        "expected": "external_executed",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-dispatch-builtins-edge-1",
+        "description": "Verify handling of empty or blank input lines during routing evaluation.",
+        "expected_behavior": "Empty input strings are safely ignored without triggering errors or false matches.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "\n",
+        "expected": "",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-dispatch-builtins-oracle-1",
+        "description": "Verify dynamic routing consistency across varied input sequences.",
+        "expected_behavior": "The command router correctly distinguishes internal commands from external binaries across randomized execution sequences.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "stdin": "builtin_command\nexternal_command\n",
+        "expected": "oracle_verified",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-dispatch-builtins-normal-1",
+      "test-dispatch-builtins-fallback-1",
+      "test-dispatch-builtins-edge-1",
+      "test-dispatch-builtins-oracle-1"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tvar outputs []string\n\n\tfor {\n\t\tline, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t\tcmd := strings.TrimSpace(line)\n\t\tif cmd == \"\" {\n\t\t\tcontinue\n\t\t} else if cmd == \"builtin_command\" {\n\t\t\toutputs = append(outputs, \"internal_handled\")\n\t\t} else if cmd == \"external_command\" {\n\t\t\toutputs = append(outputs, \"external_executed\")\n\t\t}\n\t}\n\n\tif len(outputs) == 2 \u0026\u0026 outputs[0] == \"internal_handled\" \u0026\u0026 outputs[1] == \"external_executed\" {\n\t\tfmt.Print(\"oracle_verified\")\n\t} else if len(outputs) \u003e 0 {\n\t\tfmt.Print(strings.Join(outputs, \"\\n\"))\n\t}\n}"
+    }
+  },
+  "verified": false
+}

@@ -1,0 +1,156 @@
+{
+  "id": "level-6-process-execution",
+  "order": 6,
+  "milestone_id": "process-execution",
+  "title": "Spawn Child Process",
+  "goal": "Execute external commands using system binaries and passed arguments.",
+  "narrative": {
+    "hook": "Our shell can successfully display prompts, read user input, handle exit commands, and parse complex quoted arguments into structured tokens. However, it still cannot actually invoke any external operating system programs or run system binaries.",
+    "motivation": "Without the ability to spawn separate child processes, an interactive command interpreter remains an isolated text parser unable to leverage system utilities. This step bridges our parsed token stream directly to the underlying operating system execution facilities.",
+    "concrete_demo": "When an operator provides an executable name alongside required parameters, the system initiates the requested binary as a distinct child process. This transforms our shell from a static text processor into a functional interface capable of triggering external tools."
+  },
+  "difficulty": "easy",
+  "status": "development",
+  "learning_objectives": [
+    "Understand how an operating system invokes a separate external executable from a parent program.",
+    "Pass a command name and argument list to the process creation runtime interface."
+  ],
+  "constraints": [
+    "Do not implement process completion waiting mechanisms in this level.",
+    "Do not implement error handling for command-not-found failures in this level."
+  ],
+  "deliverables": [
+    "A function or routine that accepts a binary name and arguments, and initiates a child process execution."
+  ],
+  "behaviors": [
+    {
+      "id": "spawn-child-process",
+      "description": "Spawns an external system process using the provided command and arguments."
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-spawn-child-normal",
+      "behavior_ids": [
+        "spawn-child-process"
+      ],
+      "category": "unit",
+      "case_type": "normal",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verifies that a basic external binary is successfully requested for execution with arguments.",
+      "expected_behavior": "The runtime successfully initiates the requested external process without returning an immediate invocation error.",
+      "io": {
+        "args": [
+          "echo",
+          "hello"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-spawn-child-edge",
+      "behavior_ids": [
+        "spawn-child-process"
+      ],
+      "category": "functional",
+      "case_type": "edge",
+      "kind": "predefined",
+      "run_on": "test_and_submit",
+      "description": "Verifies behavior when spawning a command with an empty or minimal argument list.",
+      "expected_behavior": "The system processes the invocation request correctly even when no additional arguments are supplied.",
+      "io": {
+        "args": [
+          "true"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      }
+    },
+    {
+      "id": "test-spawn-child-oracle",
+      "behavior_ids": [
+        "spawn-child-process"
+      ],
+      "category": "integration",
+      "case_type": "normal",
+      "kind": "dynamic_oracle",
+      "run_on": "submit_only",
+      "description": "Fuzzed verification of process spawn invocation parameters against structural assumptions.",
+      "expected_behavior": "The process launcher correctly handles varied argument combinations during initiation.",
+      "io": {
+        "args": [
+          "printf",
+          "test"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      }
+    }
+  ],
+  "unlock_policy": {
+    "require_all_current_tests": true,
+    "require_all_previous_tests": true,
+    "allow_level_skipping": false
+  },
+  "agnostic_test_spec": {
+    "level_id": "level-6-process-execution",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-spawn-child-normal",
+        "description": "Verifies that a basic external binary is successfully requested for execution with arguments.",
+        "expected_behavior": "The runtime successfully initiates the requested external process without returning an immediate invocation error.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "echo",
+          "hello"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-spawn-child-edge",
+        "description": "Verifies behavior when spawning a command with an empty or minimal argument list.",
+        "expected_behavior": "The system processes the invocation request correctly even when no additional arguments are supplied.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "true"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-spawn-child-oracle",
+        "description": "Fuzzed verification of process spawn invocation parameters against structural assumptions.",
+        "expected_behavior": "The process launcher correctly handles varied argument combinations during initiation.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "args": [
+          "printf",
+          "test"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-spawn-child-normal",
+      "test-spawn-child-edge",
+      "test-spawn-child-oracle"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"os/exec\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tfmt.Print(\"\u003e \")\n\t\tinput, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t\tinput = strings.TrimSpace(input)\n\t\tif input == \"\" {\n\t\t\tcontinue\n\t\t}\n\t\tif input == \"exit\" {\n\t\t\tbreak\n\t\t}\n\n\t\tparts := strings.Fields(input)\n\t\tcmdName := parts[0]\n\t\tvar args []string\n\t\tif len(parts) \u003e 1 {\n\t\t\targs = parts[1:]\n\t\t}\n\n\t\tcmd := exec.Command(cmdName, args...)\n\t\tcmd.Stdout = os.Stdout\n\t\tcmd.Stderr = os.Stderr\n\t\tcmd.Stdin = os.Stdin\n\n\t\terr = cmd.Run()\n\t\tif err != nil {\n\t\t\tfmt.Printf(\"error: %v\\n\", err)\n\t\t} else {\n\t\t\tfmt.Println(\"success\")\n\t\t}\n\t}\n}\n"
+    }
+  },
+  "verified": false
+}

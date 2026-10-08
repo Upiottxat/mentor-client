@@ -1,0 +1,74 @@
+{
+  "milestone_id": "process-execution",
+  "questions": [
+    {
+      "id": "q-1",
+      "level_id": "level-6-process-execution",
+      "question": "When spawning an external process in this language using os/exec, why is it important to carefully separate the command name from its arguments instead of concatenating them into a single string?",
+      "options": [
+        "Go requires a single string to optimize memory allocation inside the garbage collector.",
+        "Separating them allows the operating system to automatically run the command in background mode.",
+        "It prevents command injection vulnerabilities and ensures correct parsing of arguments with spaces.",
+        "The underlying operating system exec system call only accepts arrays of integers."
+      ],
+      "placement": {
+        "capability_ids": [
+          "spawn-child-process",
+          "wait-for-process-completion",
+          "handle-execution-errors"
+        ],
+        "behavior_ids": [
+          "spawn-child-process"
+        ],
+        "introduced_at_level_id": "level-6-process-execution",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "id": "q-2",
+      "level_id": "level-wait-for-process-completion",
+      "question": "What is the primary operational difference between using Cmd.Run() and Cmd.Start() followed by Cmd.Wait() in The language's exec package?",
+      "options": [
+        "Cmd.Run() runs the process asynchronously while Cmd.Start() runs it synchronously.",
+        "Cmd.Run() blocks until the process finishes, whereas Cmd.Start() launches the process and returns immediately without waiting.",
+        "Cmd.Run() captures standard error automatically, while Cmd.Start() discards it.",
+        "There is no functional difference; they are aliases for the same underlying function."
+      ],
+      "placement": {
+        "capability_ids": [
+          "spawn-child-process",
+          "wait-for-process-completion",
+          "handle-execution-errors"
+        ],
+        "behavior_ids": [
+          "wait-for-process-completion"
+        ],
+        "introduced_at_level_id": "level-wait-for-process-completion",
+        "difficulty": "medium"
+      }
+    },
+    {
+      "id": "q-3",
+      "level_id": "level-8",
+      "question": "How should a shell robustly handle a scenario where a user inputs a command that does not exist in the system's PATH?",
+      "options": [
+        "Terminate the shell process immediately to prevent security breaches.",
+        "Automatically download the missing binary from the official repository.",
+        "Ignore the error and execute the next command as a shell builtin.",
+        "Capture the execution error, print a descriptive error message to stderr, and return control to the user prompt."
+      ],
+      "placement": {
+        "capability_ids": [
+          "spawn-child-process",
+          "wait-for-process-completion",
+          "handle-execution-errors"
+        ],
+        "behavior_ids": [
+          "handle-execution-errors"
+        ],
+        "introduced_at_level_id": "level-8",
+        "difficulty": "hard"
+      }
+    }
+  ]
+}

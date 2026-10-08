@@ -1,0 +1,11 @@
+milestone_id: command-parsing
+diagrams:
+    - id: diag-tokenization
+      title: Tokenization Pipeline
+      format: mermaid
+      content: |-
+        graph TD
+        Raw_Input[Raw Input String] --> Whitespace_Splitter[Whitespace Splitter]
+        Whitespace_Splitter --> Token_A[Command Token]
+        Whitespace_Splitter --> Token_B[Argument 1]
+        Whitespace_Splitter --> Token_C[Argument 2]

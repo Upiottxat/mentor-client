@@ -1,0 +1,33 @@
+{
+  "level_id": "level-6-process-execution",
+  "order": 6,
+  "milestone_id": "process-execution",
+  "language": "go",
+  "build": {
+    "required": true
+  },
+  "implementation_guidance": [
+    "Utilize the standard system process creation API provided by the runtime environment.",
+    "Separate the executable name from its parameter slice before invoking the process launcher."
+  ],
+  "hints": [
+    {
+      "id": "hint-spawn-child-process-1",
+      "order": 1,
+      "type": "conceptual",
+      "content": "Operating systems maintain a distinction between the current program and external binaries stored on disk. To run an external program, the parent application must issue a system request specifying the target executable along with any configuration parameters.",
+      "behavior_id": "spawn-child-process",
+      "reveal_after_attempts": 2,
+      "spoiler_risk": false
+    },
+    {
+      "id": "hint-spawn-child-process-2",
+      "order": 2,
+      "type": "directional",
+      "content": "Look for standard runtime library functions dedicated to command execution. You will want to pass your first token as the command identifier and any subsequent tokens as the argument parameters.",
+      "behavior_id": "spawn-child-process",
+      "reveal_after_attempts": 4,
+      "spoiler_risk": false
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "milestone_id": "repl-loop",
+  "diagrams": [
+    {
+      "id": "diag-repl-flow",
+      "title": "Read-Eval-Print Loop Workflow",
+      "format": "mermaid",
+      "content": "graph TD\nStart([Start Shell]) --\u003e Display[Display Prompt]\nDisplay --\u003e Read[Read User Input]\nRead --\u003e Check{Exit Command or EOF?}\nCheck --\u003e|Yes| Exit([Terminate Cleanly])\nCheck --\u003e|No| Eval[Process Command]\nEval --\u003e Display"
+    }
+  ]
+}

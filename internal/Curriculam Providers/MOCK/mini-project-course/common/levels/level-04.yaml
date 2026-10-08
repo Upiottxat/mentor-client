@@ -1,0 +1,136 @@
+id: level-tokenize-input-string
+order: 4
+milestone_id: command-parsing
+title: Tokenize Input String
+goal: Split a raw user input string into whitespace-separated argument tokens.
+narrative:
+    hook: Your shell can successfully read a line of text typed by the user, but it still treats the entire line as a single monolithic block of text rather than separate instructions.
+    motivation: To execute commands and pass flags correctly, the shell needs a way to dissect raw input strings into distinct words or arguments so each piece can be analyzed independently.
+    concrete_demo: When a user types a multi-word command line into the interactive prompt, the shell isolates the individual words into an orderly sequence of distinct components for future processing.
+difficulty: easy
+status: development
+learning_objectives:
+    - Understand how to partition a continuous string into discrete components based on whitespace boundaries.
+    - Represent a sequence of textual arguments as a collection of separate string tokens.
+constraints:
+    - Do not implement command execution or process spawning yet.
+    - Do not handle quoted strings containing spaces in this level.
+    - Rely solely on standard whitespace character boundaries for splitting.
+deliverables:
+    - A routine or function that takes a raw input string and returns a collection of distinct argument tokens.
+behaviors:
+    - id: tokenize-input-string
+      description: Splits raw user input strings into individual whitespace-separated argument tokens.
+tests:
+    - id: test-tokenize-normal-whitespace
+      behavior_ids:
+        - tokenize-input-string
+      category: unit
+      case_type: normal
+      kind: predefined
+      run_on: test_and_submit
+      description: Verify that a standard input string with multiple words is correctly separated into individual tokens.
+      expected_behavior: The input string is broken down into a sequence of distinct tokens separated by spaces.
+      io:
+        stdin: |
+            command arg1 arg2
+        expected: '["command", "arg1", "arg2"]'
+        matcher: json_equal
+    - id: test-tokenize-edge-extra-whitespace
+      behavior_ids:
+        - tokenize-input-string
+      category: unit
+      case_type: edge
+      kind: predefined
+      run_on: test_and_submit
+      description: Verify that leading, trailing, and multiple consecutive whitespace characters do not produce empty tokens.
+      expected_behavior: Excessive or boundary whitespace is trimmed or ignored, leaving only meaningful argument tokens.
+      io:
+        stdin: "   run    fast   \n"
+        expected: '["run", "fast"]'
+        matcher: json_equal
+    - id: test-tokenize-edge-empty-input
+      behavior_ids:
+        - tokenize-input-string
+      category: unit
+      case_type: edge
+      kind: dynamic_oracle
+      run_on: submit_only
+      description: Verify the behavior when the provided input string contains only whitespace or is completely empty.
+      expected_behavior: An empty or whitespace-only input results in a zero-length collection of tokens.
+      io:
+        stdin: "   \n"
+        expected: '[]'
+        matcher: json_equal
+unlock_policy:
+    require_all_current_tests: true
+    require_all_previous_tests: true
+    allow_level_skipping: false
+agnostic_test_spec:
+    level_id: level-tokenize-input-string
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-tokenize-normal-whitespace
+          description: Verify that a standard input string with multiple words is correctly separated into individual tokens.
+          expected_behavior: The input string is broken down into a sequence of distinct tokens separated by spaces.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            command arg1 arg2
+          expected: '["command", "arg1", "arg2"]'
+          matcher: json_equal
+        - name: test-tokenize-edge-extra-whitespace
+          description: Verify that leading, trailing, and multiple consecutive whitespace characters do not produce empty tokens.
+          expected_behavior: Excessive or boundary whitespace is trimmed or ignored, leaving only meaningful argument tokens.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: "   run    fast   \n"
+          expected: '["run", "fast"]'
+          matcher: json_equal
+        - name: test-tokenize-edge-empty-input
+          description: Verify the behavior when the provided input string contains only whitespace or is completely empty.
+          expected_behavior: An empty or whitespace-only input results in a zero-length collection of tokens.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: "   \n"
+          expected: '[]'
+          matcher: json_equal
+    test_ids:
+        - test-tokenize-normal-whitespace
+        - test-tokenize-edge-extra-whitespace
+        - test-tokenize-edge-empty-input
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import (
+            	"bufio"
+            	"encoding/json"
+            	"fmt"
+            	"os"
+            	"strings"
+            )
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	line, err := reader.ReadString('\n')
+            	if err != nil && line == "" {
+            		fmt.Println("[]")
+            		return
+            	}
+            	line = strings.TrimSpace(line)
+            	var tokens []string
+            	if line != "" {
+            		tokens = strings.Fields(line)
+            	}
+            	if tokens == nil {
+            		tokens = []string{}
+            	}
+            	data, _ := json.Marshal(tokens)
+            	fmt.Println(string(data))
+            }
+verified: false

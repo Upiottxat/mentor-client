@@ -1,0 +1,40 @@
+schema_version: 1
+milestone_id: command-parsing
+order: 2
+artifacts:
+    overview: overview.yaml
+    theory: theory.yaml
+    questions: questions.yaml
+    challenges: challenges.yaml
+    diagrams: diagrams.yaml
+    interactives: interactives.yaml
+language_artifacts:
+    go:
+        reference: reference.yaml
+        examples: examples.yaml
+        interactives: interactives.yaml
+server_artifacts:
+    solutions: document-solutions.yaml
+    bossfight_contract: milestone-02.bossfight.yaml
+learning_path:
+    - level_id: level-tokenize-input-string
+      unlocks:
+        theory:
+            - sec-tokenize
+        questions:
+            - q-1
+            - q-3
+        challenges:
+            - ch-tokenize-basic
+        diagrams: []
+        interactives: []
+    - level_id: level-5-command-parsing
+      unlocks:
+        theory:
+            - sec-quotes
+        questions:
+            - q-2
+        challenges:
+            - ch-parse-quotes
+        diagrams: []
+        interactives: []

@@ -1,0 +1,15 @@
+{
+  "milestone_id": "built-in-commands",
+  "order": 4,
+  "core_concept": "Built-in commands execute directly within the shell process to alter its internal state, bypassing the creation of external child processes.",
+  "overview": "When operating a command-line interface, certain actions are fundamentally tied to the execution environment of the shell itself. If you wish to change the current working directory, modifying a temporary child process will not affect the parent shell prompt where you type commands. Such operations require native handling inside the core process logic.\n\nIn this milestone, you will transition from purely launching external binaries to intercepting specific commands and routing them through internal handlers. This ability allows your shell to maintain persistent state, manage environment variables, and control its own execution lifecycle effectively.",
+  "recap": {
+    "summary": "Completed milestone 4 (Built-in Shell Commands), establishing core understanding of Built-in commands execute directly within the shell process to alter its internal state, bypassing the creation of external child processes..",
+    "key_takeaways": [
+      "Built-in commands execute directly within the shell process to alter its internal state, bypassing the creation of external child processes."
+    ],
+    "integration_readiness": [
+      "Ready for downstream milestones and integration challenges."
+    ]
+  }
+}

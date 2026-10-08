@@ -1,0 +1,107 @@
+id: display-shell-prompt-level
+order: 1
+milestone_id: repl-loop
+title: Display Shell Prompt
+goal: Output a visible prompt indicating the shell is ready for user input.
+narrative:
+    hook: Every interactive command-line tool begins with a blank slate and no visible indicator of life.
+    motivation: Without a visual prompt, users cannot know if the program is running, hung, or waiting for input.
+    concrete_demo: When launching the program, a clean indicator string instantly appears on the screen to show that the system is listening and ready.
+difficulty: easy
+status: development
+learning_objectives:
+    - Understand how a command-line interface communicates readiness through a prompt string.
+    - Learn how to write text directly to the standard output stream.
+constraints:
+    - Do not read any input from standard input.
+    - Do not implement an interactive loop or continuous execution.
+    - Do not mention any specific programming language in common fields.
+deliverables:
+    - A program that outputs the designated shell prompt string to standard output.
+behaviors:
+    - id: display-shell-prompt
+      description: Prints a clear, visible shell prompt to standard output.
+tests:
+    - id: test-prompt-normal-output
+      behavior_ids:
+        - display-shell-prompt
+      category: unit
+      case_type: normal
+      kind: predefined
+      run_on: test_and_submit
+      description: Verify that the standard output contains the expected prompt string.
+      expected_behavior: The shell writes the prompt string to standard output upon startup.
+      io:
+        expected: '$ '
+        matcher: exact
+    - id: test-prompt-functional-check
+      behavior_ids:
+        - display-shell-prompt
+      category: functional
+      case_type: normal
+      kind: predefined
+      run_on: test_and_submit
+      description: Verify the prompt appears correctly in a standard invocation scenario.
+      expected_behavior: The correct prompt indicator is rendered without errors.
+      io:
+        expected: '$ '
+        matcher: trim
+    - id: test-prompt-edge-empty-environment
+      behavior_ids:
+        - display-shell-prompt
+      category: functional
+      case_type: edge
+      kind: dynamic_oracle
+      run_on: submit_only
+      description: Verify prompt rendering under minimal execution parameters.
+      expected_behavior: The shell successfully displays the prompt even with an empty environment.
+      io:
+        expected: '$ '
+        matcher: exact
+unlock_policy:
+    require_all_current_tests: true
+    require_all_previous_tests: true
+    allow_level_skipping: false
+agnostic_test_spec:
+    level_id: display-shell-prompt-level
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-prompt-normal-output
+          description: Verify that the standard output contains the expected prompt string.
+          expected_behavior: The shell writes the prompt string to standard output upon startup.
+          kind: predefined
+          run_on: test_and_submit
+          expected: '$ '
+          matcher: exact
+        - name: test-prompt-functional-check
+          description: Verify the prompt appears correctly in a standard invocation scenario.
+          expected_behavior: The correct prompt indicator is rendered without errors.
+          kind: predefined
+          run_on: test_and_submit
+          expected: '$ '
+          matcher: trim
+        - name: test-prompt-edge-empty-environment
+          description: Verify prompt rendering under minimal execution parameters.
+          expected_behavior: The shell successfully displays the prompt even with an empty environment.
+          kind: dynamic_oracle
+          run_on: submit_only
+          expected: '$ '
+          matcher: exact
+    test_ids:
+        - test-prompt-normal-output
+        - test-prompt-functional-check
+        - test-prompt-edge-empty-environment
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import "fmt"
+
+            func main() {
+            	fmt.Print("$ ")
+            }
+verified: false

@@ -1,0 +1,66 @@
+milestone_id: input-output-redirection
+questions:
+    - id: q-1
+      level_id: level-11-parse-redirection-operators
+      question: When implementing output redirection using '>' in a shell, how should the target file be opened by default if it already exists?
+      options:
+        - Opened in append mode (O_APPEND)
+        - Truncated to zero length (O_TRUNC)
+        - Opened strictly for reading only
+        - Rejected with an error preventing execution
+      placement:
+        capability_ids:
+            - parse-redirection-operators
+            - apply-file-redirection
+        behavior_ids:
+            - parse-redirection-operators
+        introduced_at_level_id: level-11-parse-redirection-operators
+        difficulty: easy
+    - id: q-2
+      level_id: level-12-input-output-redirection
+      question: What is the primary purpose of the dup2 system call (or The language's equivalent os.File redirection mechanics) before executing a command with redirection?
+      options:
+        - To duplicate the command string for background execution
+        - To create a backup copy of the original source code
+        - To redirect standard streams by copying a file descriptor onto descriptors 0, 1, or 2
+        - To spawn a separate process for handling asynchronous file IO
+      placement:
+        capability_ids:
+            - parse-redirection-operators
+            - apply-file-redirection
+        behavior_ids:
+            - apply-file-redirection
+        introduced_at_level_id: level-12-input-output-redirection
+        difficulty: medium
+    - id: q-3
+      level_id: level-11-parse-redirection-operators
+      question: If a command line contains both an argument list and a redirection operator (e.g., 'echo hello > file.txt'), how should the token parser handle the filename token following '>'?
+      options:
+        - Extracted as the redirection target file and excluded from the command's regular argument list
+        - Concatenated with the redirection operator and passed as a flag to the executable
+        - Ignored completely since redirection operators are handled entirely by the kernel
+        - Passed as the final positional argument to the command execution function
+      placement:
+        capability_ids:
+            - parse-redirection-operators
+            - apply-file-redirection
+        behavior_ids:
+            - parse-redirection-operators
+        introduced_at_level_id: level-11-parse-redirection-operators
+        difficulty: easy
+    - id: q-4
+      level_id: level-12-input-output-redirection
+      question: Why is it important to restore original standard file descriptors (or handle them carefully in a child process) after executing a redirected command in a shell?
+      options:
+        - To prevent memory leaks in the Go garbage collector
+        - To ensure the operating system releases the file locks immediately
+        - To comply with POSIX thread safety requirements
+        - To prevent subsequent shell commands from unexpectedly reading from or writing to the redirected files
+      placement:
+        capability_ids:
+            - parse-redirection-operators
+            - apply-file-redirection
+        behavior_ids:
+            - apply-file-redirection
+        introduced_at_level_id: level-12-input-output-redirection
+        difficulty: medium

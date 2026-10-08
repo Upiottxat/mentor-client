@@ -1,0 +1,62 @@
+{
+  "level_id": "level-6-process-execution",
+  "order": 6,
+  "agnostic_test_spec": {
+    "level_id": "level-6-process-execution",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-spawn-child-normal",
+        "description": "Verifies that a basic external binary is successfully requested for execution with arguments.",
+        "expected_behavior": "The runtime successfully initiates the requested external process without returning an immediate invocation error.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "echo",
+          "hello"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-spawn-child-edge",
+        "description": "Verifies behavior when spawning a command with an empty or minimal argument list.",
+        "expected_behavior": "The system processes the invocation request correctly even when no additional arguments are supplied.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "args": [
+          "true"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-spawn-child-oracle",
+        "description": "Fuzzed verification of process spawn invocation parameters against structural assumptions.",
+        "expected_behavior": "The process launcher correctly handles varied argument combinations during initiation.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "args": [
+          "printf",
+          "test"
+        ],
+        "expected": "success",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-spawn-child-normal",
+      "test-spawn-child-edge",
+      "test-spawn-child-oracle"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"os/exec\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tfmt.Print(\"\u003e \")\n\t\tinput, err := reader.ReadString('\\n')\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t\tinput = strings.TrimSpace(input)\n\t\tif input == \"\" {\n\t\t\tcontinue\n\t\t}\n\t\tif input == \"exit\" {\n\t\t\tbreak\n\t\t}\n\n\t\tparts := strings.Fields(input)\n\t\tcmdName := parts[0]\n\t\tvar args []string\n\t\tif len(parts) \u003e 1 {\n\t\t\targs = parts[1:]\n\t\t}\n\n\t\tcmd := exec.Command(cmdName, args...)\n\t\tcmd.Stdout = os.Stdout\n\t\tcmd.Stderr = os.Stderr\n\t\tcmd.Stdin = os.Stdin\n\n\t\terr = cmd.Run()\n\t\tif err != nil {\n\t\t\tfmt.Printf(\"error: %v\\n\", err)\n\t\t} else {\n\t\t\tfmt.Println(\"success\")\n\t\t}\n\t}\n}\n"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+milestone_id: process-execution
+challenges:
+    - id: ch-spawn-command
+      level_id: level-6-process-execution
+      title: Spawn and Execute External Command
+      description: Your shell needs to be able to invoke system binaries like 'ls', 'echo', or 'cat' by passing the appropriate arguments.
+      task: Implement a Function executeCommand that takes a command name and a slice of string arguments, creates an exec.Cmd object, connects its standard output and error to the console, and starts it.
+      hints:
+        - Use the exec.Command function from the os/exec package.
+        - Assign os.Stdout and os.Stderr to your Cmd struct fields.
+        - Call the Run() method on your command object to execute it.
+      placement:
+        capability_ids:
+            - spawn-child-process
+            - wait-for-process-completion
+            - handle-execution-errors
+        behavior_ids:
+            - spawn-child-process
+        introduced_at_level_id: level-6-process-execution
+        difficulty: easy
+    - id: ch-wait-process
+      level_id: level-wait-for-process-completion
+      title: Wait for Process Completion
+      description: Understanding separate start and wait phases is crucial for implementing background jobs and foreground synchronization in your shell.
+      task: Implement a Function runAndWait that uses Cmd.Start() to launch a background process and then explicitly calls Cmd.Wait() to wait for its completion and return any error.
+      hints:
+        - Create the command with exec.Command.
+        - Call cmd.Start() and handle any startup error.
+        - Call cmd.Wait() to block until the process exits.
+      placement:
+        capability_ids:
+            - spawn-child-process
+            - wait-for-process-completion
+            - handle-execution-errors
+        behavior_ids:
+            - wait-for-process-completion
+        introduced_at_level_id: level-wait-for-process-completion
+        difficulty: medium
+    - id: ch-handle-errors
+      level_id: level-8
+      title: Graceful Error Handling for Missing Binaries
+      description: Users will often make typos or type commands that are not installed. Your shell must gracefully report these failures.
+      task: Write a function safeExecute that wraps command execution and checks if the returned error matches exec.ErrNotFound or other execution failures, printing a friendly error message instead of panicking.
+      hints:
+        - Inspect the error returned by Cmd.Run().
+        - Use errors.Is(err, exec.ErrNotFound) to check for missing executables.
+      placement:
+        capability_ids:
+            - spawn-child-process
+            - wait-for-process-completion
+            - handle-execution-errors
+        behavior_ids:
+            - handle-execution-errors
+        introduced_at_level_id: level-8
+        difficulty: hard

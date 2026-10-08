@@ -1,0 +1,54 @@
+{
+  "level_id": "level-tokenize-input-string",
+  "order": 4,
+  "agnostic_test_spec": {
+    "level_id": "level-tokenize-input-string",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-tokenize-normal-whitespace",
+        "description": "Verify that a standard input string with multiple words is correctly separated into individual tokens.",
+        "expected_behavior": "The input string is broken down into a sequence of distinct tokens separated by spaces.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "command arg1 arg2\n",
+        "expected": "[\"command\", \"arg1\", \"arg2\"]",
+        "matcher": "json_equal"
+      },
+      {
+        "name": "test-tokenize-edge-extra-whitespace",
+        "description": "Verify that leading, trailing, and multiple consecutive whitespace characters do not produce empty tokens.",
+        "expected_behavior": "Excessive or boundary whitespace is trimmed or ignored, leaving only meaningful argument tokens.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "   run    fast   \n",
+        "expected": "[\"run\", \"fast\"]",
+        "matcher": "json_equal"
+      },
+      {
+        "name": "test-tokenize-edge-empty-input",
+        "description": "Verify the behavior when the provided input string contains only whitespace or is completely empty.",
+        "expected_behavior": "An empty or whitespace-only input results in a zero-length collection of tokens.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "stdin": "   \n",
+        "expected": "[]",
+        "matcher": "json_equal"
+      }
+    ],
+    "test_ids": [
+      "test-tokenize-normal-whitespace",
+      "test-tokenize-edge-extra-whitespace",
+      "test-tokenize-edge-empty-input"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"encoding/json\"\n\t\"fmt\"\n\t\"os\"\n\t\"strings\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tline, err := reader.ReadString('\\n')\n\tif err != nil \u0026\u0026 line == \"\" {\n\t\tfmt.Println(\"[]\")\n\t\treturn\n\t}\n\tline = strings.TrimSpace(line)\n\tvar tokens []string\n\tif line != \"\" {\n\t\ttokens = strings.Fields(line)\n\t}\n\tif tokens == nil {\n\t\ttokens = []string{}\n\t}\n\tdata, _ := json.Marshal(tokens)\n\tfmt.Println(string(data))\n}"
+    }
+  }
+}

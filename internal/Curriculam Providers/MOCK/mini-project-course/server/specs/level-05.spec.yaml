@@ -1,0 +1,131 @@
+level_id: level-5-command-parsing
+order: 5
+agnostic_test_spec:
+    level_id: level-5-command-parsing
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-handle-quotes-normal-single
+          description: Verifies that single quotes group words with spaces into a single token.
+          expected_behavior: The input string containing single-quoted sections produces a unified argument without outer quotes.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            arg1 'hello world' arg3
+          expected: |
+            arg1
+            hello world
+            arg3
+          matcher: exact
+        - name: test-handle-quotes-normal-double
+          description: Verifies that double quotes group words with spaces into a single token.
+          expected_behavior: The input string containing double-quoted sections produces a unified argument without outer quotes.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            cmd "file name with spaces.txt"
+          expected: |
+            cmd
+            file name with spaces.txt
+          matcher: exact
+        - name: test-handle-quotes-edge-empty
+          description: Verifies handling of empty quoted strings within the input stream.
+          expected_behavior: Empty quotes result in an empty argument token rather than disappearing entirely.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            arg1 "" arg3
+          expected: |
+            arg1
+
+            arg3
+          matcher: exact
+        - name: test-handle-quotes-dynamic-mixed
+          description: Verifies correct behavior with a combination of unquoted, single-quoted, and double-quoted parameters.
+          expected_behavior: All argument boundaries are correctly identified regardless of quote types.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: |
+            echo hello 'wide world' "from program"
+          expected: |
+            echo
+            hello
+            wide world
+            from program
+          matcher: exact
+    test_ids:
+        - test-handle-quotes-normal-single
+        - test-handle-quotes-normal-double
+        - test-handle-quotes-edge-empty
+        - test-handle-quotes-dynamic-mixed
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"strings"
+            )
+
+            func parseArgs(input string) []string {
+            	var args []string
+            	var current strings.Builder
+            	inQuote := false
+            	var quoteChar rune
+            	
+            	runnes := []rune(input)
+            	for i := 0; i < len(runnes); i++ {
+            		r := runnes[i]
+            		if inQuote {
+            			if r == quoteChar {
+            				inQuote = false
+            			} else {
+            				current.WriteRune(r)
+            			}
+            		} else {
+            			if r == '\'' || r == '"' {
+            				inQuote = true
+            				quoteChar = r
+            			} else if r == ' ' || r == '\t' || r == '\r' || r == '\n' {
+            				if current.Len() > 0 {
+            					args = append(args, current.String())
+            					current.Reset()
+            				}
+            			} else {
+            				current.WriteRune(r)
+            			}
+            		}
+            	}
+            	if current.Len() > 0 || inQuote {
+            		args = append(args, current.String())
+            	}
+            	return args
+            }
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	for {
+            		line, err := reader.ReadString('\n')
+            		if len(line) == 0 && err != nil {
+            			break
+            		}
+            		line = strings.TrimSuffix(line, "\n")
+            		line = strings.TrimSuffix(line, "\r")
+            		if line == "" && err != nil {
+            			break
+            		}
+            		
+            		args := parseArgs(line)
+            		for _, arg := range args {
+            			fmt.Println(arg)
+            		}
+            		if err != nil {
+            			break
+            		}
+            	}
+            }

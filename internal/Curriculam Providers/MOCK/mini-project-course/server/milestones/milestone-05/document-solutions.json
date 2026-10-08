@@ -1,0 +1,44 @@
+{
+  "milestone_id": "input-output-redirection",
+  "questions": [
+    {
+      "question_id": "q-1",
+      "level_id": "level-11-parse-redirection-operators",
+      "answer_index": 1,
+      "explanation": "Standard output redirection ('\u003e') typically truncates the existing file to zero length. Therefore, it should be opened with O_TRUNC along with O_WRONLY and O_CREATE."
+    },
+    {
+      "question_id": "q-2",
+      "level_id": "level-12-input-output-redirection",
+      "answer_index": 2,
+      "explanation": "dup2 atomically replaces a standard file descriptor (like stdout 1 or stdin 0) with a target file descriptor, ensuring standard library calls or external processes write to or read from the file."
+    },
+    {
+      "question_id": "q-3",
+      "level_id": "level-11-parse-redirection-operators",
+      "answer_index": 0,
+      "explanation": "The filename token immediately following the redirection operator must be extracted and treated as the redirection target rather than being passed as a standard command argument."
+    },
+    {
+      "question_id": "q-4",
+      "level_id": "level-12-input-output-redirection",
+      "answer_index": 3,
+      "explanation": "If running built-in commands or maintaining a persistent shell loop, failing to restore standard descriptors means subsequent shell output or input will permanently target the redirected files."
+    }
+  ],
+  "challenges": [
+    {
+      "challenge_id": "ch-1",
+      "level_id": "level-11-parse-redirection-operators",
+      "title": "Parse Output Redirection Operator",
+      "solution": "func ParseRedirection(tokens []string) ([]string, string) { var args []string; var outFile string; for i := 0; i \u003c len(tokens); i++ { if tokens[i] == \"\u003e\" \u0026\u0026 i+1 \u003c len(tokens) { outFile = tokens[i+1] i++ } else { args = append(args, tokens[i]) } } return args, outFile }"
+    },
+    {
+      "challenge_id": "ch-2",
+      "level_id": "level-12-input-output-redirection",
+      "title": "Configuring File Redirection for Commands",
+      "solution": "file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644); if err != nil { return err }; defer file.Close(); err = syscall.Dup2(int(file.Fd()), int(os.Stdout.Fd())); if err != nil { return err }"
+    }
+  ],
+  "interactive_challenges": null
+}

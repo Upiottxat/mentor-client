@@ -1,0 +1,21 @@
+{
+  "milestone_id": "built-in-commands",
+  "sections": [
+    {
+      "id": "sec-cd-command",
+      "title": "Implement CD Command",
+      "content": "The working directory is a fundamental property of any running process, inherited by all children spawned from it. When a user requests to change directories, altering a spawned subprocess changes only that temporary child's path, leaving the parent shell stranded in the original folder. To achieve persistent navigation, the shell process must invoke system-level path resolution routines internally. Think of the shell as a captain steering a ship; if the captain tells a crew member to walk to a different room on a separate vessel, the captain's own ship does not move. The captain must walk through the compartments directly. Similarly, directory modification is an introspective operation that must update the working state of the main execution context. Handling path arguments securely, managing relative versus absolute paths, and handling potential permission or existence errors form the core of robust directory navigation within a process.",
+      "introduced_at_level_id": "level-implement-cd-command",
+      "used_by_levels": null,
+      "is_shared": false
+    },
+    {
+      "id": "sec-dispatch",
+      "title": "Dispatch Built-ins",
+      "content": "As a command parser receives user input, it faces a fork in the road: should the instruction trigger an external executable located on the file system, or should it invoke a routine baked directly into the shell binary? Command dispatching acts as a traffic controller at this intersection. Before searching system paths or spawning child processes, the execution engine inspects the command name against a registry of known internal keywords. If a match occurs, control flows straight to the corresponding internal handler function. Imagine a restaurant where most orders require sending a ticket to the kitchen, but certain quick requests are handled immediately at the counter by the cashier. Dispatching lets the shell identify those counter-service commands instantly, saving system overhead, avoiding process creation latency, and preserving access to internal memory structures.",
+      "introduced_at_level_id": "level-10-built-in-commands",
+      "used_by_levels": null,
+      "is_shared": false
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+level_id: level-6-process-execution
+order: 6
+agnostic_test_spec:
+    level_id: level-6-process-execution
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-spawn-child-normal
+          description: Verifies that a basic external binary is successfully requested for execution with arguments.
+          expected_behavior: The runtime successfully initiates the requested external process without returning an immediate invocation error.
+          kind: predefined
+          run_on: test_and_submit
+          args:
+            - echo
+            - hello
+          expected: success
+          matcher: exact
+        - name: test-spawn-child-edge
+          description: Verifies behavior when spawning a command with an empty or minimal argument list.
+          expected_behavior: The system processes the invocation request correctly even when no additional arguments are supplied.
+          kind: predefined
+          run_on: test_and_submit
+          args:
+            - "true"
+          expected: success
+          matcher: exact
+        - name: test-spawn-child-oracle
+          description: Fuzzed verification of process spawn invocation parameters against structural assumptions.
+          expected_behavior: The process launcher correctly handles varied argument combinations during initiation.
+          kind: dynamic_oracle
+          run_on: submit_only
+          args:
+            - printf
+            - test
+          expected: success
+          matcher: exact
+    test_ids:
+        - test-spawn-child-normal
+        - test-spawn-child-edge
+        - test-spawn-child-oracle
+reference_solution:
+    language: go
+    files:
+        main.go: |
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"os/exec"
+            	"strings"
+            )
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	for {
+            		fmt.Print("> ")
+            		input, err := reader.ReadString('\n')
+            		if err != nil {
+            			break
+            		}
+            		input = strings.TrimSpace(input)
+            		if input == "" {
+            			continue
+            		}
+            		if input == "exit" {
+            			break
+            		}
+
+            		parts := strings.Fields(input)
+            		cmdName := parts[0]
+            		var args []string
+            		if len(parts) > 1 {
+            			args = parts[1:]
+            		}
+
+            		cmd := exec.Command(cmdName, args...)
+            		cmd.Stdout = os.Stdout
+            		cmd.Stderr = os.Stderr
+            		cmd.Stdin = os.Stdin
+
+            		err = cmd.Run()
+            		if err != nil {
+            			fmt.Printf("error: %v\n", err)
+            		} else {
+            			fmt.Println("success")
+            		}
+            	}
+            }

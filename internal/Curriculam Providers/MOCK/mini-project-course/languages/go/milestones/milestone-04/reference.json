@@ -1,0 +1,37 @@
+{
+  "milestone_id": "built-in-commands",
+  "language": "go",
+  "sections": [
+    {
+      "common_section_id": "sec-cd-command",
+      "syntax_topics": [
+        "os.Chdir",
+        "os.Getwd",
+        "String comparison for routing"
+      ],
+      "examples": [
+        {
+          "theory_section_id": "sec-cd-command",
+          "title": "Changing Directory",
+          "code": "err := os.Chdir(\"/path/to/target\")\nif err != nil {\n    fmt.Printf(\"cd error: %v\\n\", err)\n}",
+          "explanation": "The os.Chdir function updates the current working directory of the running process."
+        }
+      ]
+    },
+    {
+      "common_section_id": "sec-dispatch",
+      "syntax_topics": [
+        "Switch statements for command dispatching",
+        "Function mapping"
+      ],
+      "examples": [
+        {
+          "theory_section_id": "sec-dispatch",
+          "title": "Dispatching Commands",
+          "code": "switch args[0] {\ncase \"cd\":\n    // Handle cd internally\n    err := os.Chdir(args[1])\n    if err != nil {\n        fmt.Println(err)\n    }\ndefault:\n    // Run external command\n    runExternal(args)\n}",
+          "explanation": "A switch statement inspects the command verb to route execution either to internal logic or external process spawning."
+        }
+      ]
+    }
+  ]
+}

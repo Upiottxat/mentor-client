@@ -1,0 +1,25 @@
+level_id: level-3-handle-exit-command
+order: 3
+milestone_id: repl-loop
+language: go
+build:
+    required: true
+implementation_guidance:
+    - Check incoming lines against your designated termination keyword before processing them further.
+    - Inspect the result of your reading mechanism to detect end-of-file or stream closure conditions.
+    - Ensure your loop breaks out of execution cleanly when either termination trigger is encountered.
+hints:
+    - id: hint-handle-exit-command-1
+      order: 1
+      type: conceptual
+      content: Think about how a loop needs a breaking condition. Beyond normal task execution, you should evaluate every piece of input against a specific sentinel value that signals the end of the session, as well as checking if the input source has closed completely.
+      behavior_id: handle-exit-command
+      reveal_after_attempts: 2
+      spoiler_risk: false
+    - id: hint-handle-exit-command-2
+      order: 2
+      type: directional
+      content: Compare the trimmed user input string with your chosen shutdown keyword inside a conditional statement, and handle the reading error or end-of-file indicator by triggering a break statement to exit the main processing loop.
+      behavior_id: handle-exit-command
+      reveal_after_attempts: 4
+      spoiler_risk: false

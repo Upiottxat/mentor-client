@@ -1,0 +1,69 @@
+level_id: level-tokenize-input-string
+order: 4
+agnostic_test_spec:
+    level_id: level-tokenize-input-string
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-tokenize-normal-whitespace
+          description: Verify that a standard input string with multiple words is correctly separated into individual tokens.
+          expected_behavior: The input string is broken down into a sequence of distinct tokens separated by spaces.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            command arg1 arg2
+          expected: '["command", "arg1", "arg2"]'
+          matcher: json_equal
+        - name: test-tokenize-edge-extra-whitespace
+          description: Verify that leading, trailing, and multiple consecutive whitespace characters do not produce empty tokens.
+          expected_behavior: Excessive or boundary whitespace is trimmed or ignored, leaving only meaningful argument tokens.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: "   run    fast   \n"
+          expected: '["run", "fast"]'
+          matcher: json_equal
+        - name: test-tokenize-edge-empty-input
+          description: Verify the behavior when the provided input string contains only whitespace or is completely empty.
+          expected_behavior: An empty or whitespace-only input results in a zero-length collection of tokens.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: "   \n"
+          expected: '[]'
+          matcher: json_equal
+    test_ids:
+        - test-tokenize-normal-whitespace
+        - test-tokenize-edge-extra-whitespace
+        - test-tokenize-edge-empty-input
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import (
+            	"bufio"
+            	"encoding/json"
+            	"fmt"
+            	"os"
+            	"strings"
+            )
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	line, err := reader.ReadString('\n')
+            	if err != nil && line == "" {
+            		fmt.Println("[]")
+            		return
+            	}
+            	line = strings.TrimSpace(line)
+            	var tokens []string
+            	if line != "" {
+            		tokens = strings.Fields(line)
+            	}
+            	if tokens == nil {
+            		tokens = []string{}
+            	}
+            	data, _ := json.Marshal(tokens)
+            	fmt.Println(string(data))
+            }

@@ -1,0 +1,34 @@
+milestone_id: command-parsing
+challenges:
+    - id: ch-tokenize-basic
+      level_id: level-tokenize-input-string
+      title: Basic Whitespace Tokenizer
+      description: Before handling quotes, our shell needs to reliably split a raw user input string into distinct command and argument tokens separated by arbitrary whitespace.
+      task: Implement a Function `Tokenize(input string) []string` that splits the input string by whitespace into a slice of string tokens.
+      hints:
+        - Consider using the strings package.
+        - Look into a function that specifically handles variable-length whitespace runs.
+      placement:
+        capability_ids:
+            - tokenize-input-string
+            - handle-quoted-arguments
+        behavior_ids:
+            - tokenize-input-string
+        introduced_at_level_id: level-tokenize-input-string
+        difficulty: easy
+    - id: ch-parse-quotes
+      level_id: level-5-command-parsing
+      title: Stateful Quoted Argument Parser
+      description: Real shells allow arguments to contain spaces if they are wrapped in quotes. You must build a parser that toggles state when encountering double quote characters.
+      task: Implement a Function `ParseWithQuotes(input string) ([]string, error)` that tokenizes a string while respecting double quotes to preserve internal spaces.
+      hints:
+        - Iterate through the string rune by rune or use a state machine.
+        - Track whether you are currently inside a quoted block using a boolean flag.
+      placement:
+        capability_ids:
+            - tokenize-input-string
+            - handle-quoted-arguments
+        behavior_ids:
+            - handle-quoted-arguments
+        introduced_at_level_id: level-5-command-parsing
+        difficulty: medium

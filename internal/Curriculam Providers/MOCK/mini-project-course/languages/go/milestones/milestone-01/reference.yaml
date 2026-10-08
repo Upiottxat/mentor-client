@@ -1,0 +1,56 @@
+milestone_id: repl-loop
+language: go
+sections:
+    - common_section_id: sec-prompt
+      syntax_topics:
+        - fmt.Print
+        - bufio.NewReader
+        - os.Stdin
+      examples:
+        - theory_section_id: sec-prompt
+          title: Displaying a Prompt
+          code: |-
+            package main
+
+            import "fmt"
+
+            func main() {
+                fmt.Print("cmd> ")
+            }
+          explanation: Using fmt.Print outputs the prompt string to standard output without adding a trailing newline, keeping the cursor on the same line.
+    - common_section_id: sec-read
+      syntax_topics:
+        - bufio.Reader.ReadString
+        - strings.TrimSpace
+      examples:
+        - theory_section_id: sec-read
+          title: Reading Input with a Buffer
+          code: |-
+            package main
+
+            import (
+                "bufio"
+                "fmt"
+                "os"
+                "strings"
+            )
+
+            func main() {
+                reader := bufio.NewReader(os.Stdin)
+                fmt.Print("cmd> ")
+                input, err := reader.ReadString('\n')
+                if err == nil {
+                    cleaned := strings.TrimSpace(input)
+                    fmt.Printf("Received: %s\n", cleaned)
+                }
+            }
+          explanation: bufio.NewReader wraps os.Stdin to provide efficient buffered reading, and ReadString('\n') reads until the newline character.
+    - common_section_id: sec-exit
+      syntax_topics:
+        - os.Exit
+        - io.EOF
+      examples:
+        - theory_section_id: sec-exit
+          title: Handling Exit and EOF
+          code: "package main\n\nimport (\n    \"bufio\"\n    \"fmt\" \n    \"io\"\n    \"os\"\n    \"strings\"\n)\n\nfunc main() {\n    reader := bufio.NewReader(os.Stdin)\n    for {\n        fmt.Print(\"cmd> \")\n        input, err := reader.ReadString('\\n')\n        if err == io.EOF {\n            fmt.Println(\"\\nExiting...\")\n            break\n        }\n        \n        cmd := strings.TrimSpace(input)\n        if cmd == \"exit\" {\n            os.Exit(0)\n        }\n    }\n}"
+          explanation: Checking for io.EOF or matching the 'exit' command allows the loop to break or terminate the process cleanly using os.Exit.

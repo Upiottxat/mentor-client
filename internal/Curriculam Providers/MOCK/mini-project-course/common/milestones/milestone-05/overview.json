@@ -1,0 +1,15 @@
+{
+  "milestone_id": "input-output-redirection",
+  "order": 5,
+  "core_concept": "Input and output redirection allows a command-line shell to intercept standard streams and reroute them to or from files instead of the interactive terminal.",
+  "overview": "Up to this point, every command executed in the custom shell has communicated with the user through standard input via the keyboard and standard output via the terminal screen. While interactive communication is essential, operating systems gain immense power through composition and data persistence. In this milestone, the shell unlocks file redirection, allowing users to save command outputs to disk or feed file contents directly into programs as inputs.\n\nImagine plumbing in a house: by default, faucets empty into drains. Redirection introduces flexible hoses and adapters that route water into storage tanks or feed it from external reservoirs instead. Understanding how to parse redirection symbols and reassign standard operating system streams gives the shell true pipeline capability, bridging interactive command entry with robust file management.",
+  "recap": {
+    "summary": "Completed milestone 5 (Input and Output Redirection), establishing core understanding of Input and output redirection allows a command-line shell to intercept standard streams and reroute them to or from files instead of the interactive terminal..",
+    "key_takeaways": [
+      "Input and output redirection allows a command-line shell to intercept standard streams and reroute them to or from files instead of the interactive terminal."
+    ],
+    "integration_readiness": [
+      "Ready for downstream milestones and integration challenges."
+    ]
+  }
+}

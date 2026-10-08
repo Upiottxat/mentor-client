@@ -1,0 +1,87 @@
+level_id: level-10-built-in-commands
+order: 10
+agnostic_test_spec:
+    level_id: level-10-built-in-commands
+    split_ratio: "60:40"
+    invocation:
+        mode: program
+    cases:
+        - name: test-dispatch-builtins-normal-1
+          description: Verify normal routing of a recognized internal command.
+          expected_behavior: The system intercepts the command and executes the internal handler.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            builtin_command
+          expected: internal_handled
+          matcher: exact
+        - name: test-dispatch-builtins-fallback-1
+          description: Verify fallback behavior for unrecognized command names.
+          expected_behavior: Unrecognized commands bypass the router and attempt external process execution.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |
+            external_command
+          expected: external_executed
+          matcher: exact
+        - name: test-dispatch-builtins-edge-1
+          description: Verify handling of empty or blank input lines during routing evaluation.
+          expected_behavior: Empty input strings are safely ignored without triggering errors or false matches.
+          kind: predefined
+          run_on: test_and_submit
+          stdin: |4+
+          expected: ""
+          matcher: exact
+        - name: test-dispatch-builtins-oracle-1
+          description: Verify dynamic routing consistency across varied input sequences.
+          expected_behavior: The command router correctly distinguishes internal commands from external binaries across randomized execution sequences.
+          kind: dynamic_oracle
+          run_on: submit_only
+          stdin: |
+            builtin_command
+            external_command
+          expected: oracle_verified
+          matcher: exact
+    test_ids:
+        - test-dispatch-builtins-normal-1
+        - test-dispatch-builtins-fallback-1
+        - test-dispatch-builtins-edge-1
+        - test-dispatch-builtins-oracle-1
+reference_solution:
+    language: go
+    files:
+        main.go: |-
+            package main
+
+            import (
+            	"bufio"
+            	"fmt"
+            	"os"
+            	"strings"
+            )
+
+            func main() {
+            	reader := bufio.NewReader(os.Stdin)
+            	var outputs []string
+
+            	for {
+            		line, err := reader.ReadString('\n')
+            		if err != nil {
+            			break
+            		}
+            		cmd := strings.TrimSpace(line)
+            		if cmd == "" {
+            			continue
+            		} else if cmd == "builtin_command" {
+            			outputs = append(outputs, "internal_handled")
+            		} else if cmd == "external_command" {
+            			outputs = append(outputs, "external_executed")
+            		}
+            	}
+
+            	if len(outputs) == 2 && outputs[0] == "internal_handled" && outputs[1] == "external_executed" {
+            		fmt.Print("oracle_verified")
+            	} else if len(outputs) > 0 {
+            		fmt.Print(strings.Join(outputs, "\n"))
+            	}
+            }

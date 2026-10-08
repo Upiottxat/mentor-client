@@ -1,0 +1,43 @@
+{
+  "level_id": "level-10-built-in-commands",
+  "order": 10,
+  "milestone_id": "built-in-commands",
+  "language": "go",
+  "build": {
+    "required": true
+  },
+  "implementation_guidance": [
+    "Examine the first element of the parsed argument tokens before attempting any external process spawn calls.",
+    "Maintain a lookup mechanism or conditional check to match the command name against known built-in identifiers.",
+    "If a match is found, invoke the corresponding internal function; otherwise, proceed with the standard external execution pipeline."
+  ],
+  "hints": [
+    {
+      "id": "hint-dispatch-builtins-1",
+      "order": 1,
+      "type": "conceptual",
+      "content": "Think about how you can intercept a command before it reaches the external process execution stage by checking the command name against a predefined set of known names.",
+      "behavior_id": "dispatch-builtins",
+      "reveal_after_attempts": 2,
+      "spoiler_risk": false
+    },
+    {
+      "id": "hint-dispatch-builtins-2",
+      "order": 2,
+      "type": "directional",
+      "content": "Consider adding a conditional branch right after tokenizing input to check if the primary token matches any internal command identifier.",
+      "behavior_id": "dispatch-builtins",
+      "reveal_after_attempts": 4,
+      "spoiler_risk": false
+    },
+    {
+      "id": "hint-dispatch-builtins-3",
+      "order": 3,
+      "type": "structural",
+      "content": "Implement a dedicated routing function that accepts the tokenized arguments, inspects the command name, and returns a boolean or status indicating whether an internal handler was executed.",
+      "behavior_id": "dispatch-builtins",
+      "reveal_after_attempts": 6,
+      "spoiler_risk": false
+    }
+  ]
+}

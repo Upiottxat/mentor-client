@@ -1,0 +1,65 @@
+{
+  "level_id": "level-5-command-parsing",
+  "order": 5,
+  "agnostic_test_spec": {
+    "level_id": "level-5-command-parsing",
+    "split_ratio": "60:40",
+    "invocation": {
+      "mode": "program"
+    },
+    "cases": [
+      {
+        "name": "test-handle-quotes-normal-single",
+        "description": "Verifies that single quotes group words with spaces into a single token.",
+        "expected_behavior": "The input string containing single-quoted sections produces a unified argument without outer quotes.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "arg1 'hello world' arg3\n",
+        "expected": "arg1\nhello world\narg3\n",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-handle-quotes-normal-double",
+        "description": "Verifies that double quotes group words with spaces into a single token.",
+        "expected_behavior": "The input string containing double-quoted sections produces a unified argument without outer quotes.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "cmd \"file name with spaces.txt\"\n",
+        "expected": "cmd\nfile name with spaces.txt\n",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-handle-quotes-edge-empty",
+        "description": "Verifies handling of empty quoted strings within the input stream.",
+        "expected_behavior": "Empty quotes result in an empty argument token rather than disappearing entirely.",
+        "kind": "predefined",
+        "run_on": "test_and_submit",
+        "stdin": "arg1 \"\" arg3\n",
+        "expected": "arg1\n\narg3\n",
+        "matcher": "exact"
+      },
+      {
+        "name": "test-handle-quotes-dynamic-mixed",
+        "description": "Verifies correct behavior with a combination of unquoted, single-quoted, and double-quoted parameters.",
+        "expected_behavior": "All argument boundaries are correctly identified regardless of quote types.",
+        "kind": "dynamic_oracle",
+        "run_on": "submit_only",
+        "stdin": "echo hello 'wide world' \"from program\"\n",
+        "expected": "echo\nhello\nwide world\nfrom program\n",
+        "matcher": "exact"
+      }
+    ],
+    "test_ids": [
+      "test-handle-quotes-normal-single",
+      "test-handle-quotes-normal-double",
+      "test-handle-quotes-edge-empty",
+      "test-handle-quotes-dynamic-mixed"
+    ]
+  },
+  "reference_solution": {
+    "language": "go",
+    "files": {
+      "main.go": "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n\t\"strings\"\n)\n\nfunc parseArgs(input string) []string {\n\tvar args []string\n\tvar current strings.Builder\n\tinQuote := false\n\tvar quoteChar rune\n\t\n\trunnes := []rune(input)\n\tfor i := 0; i \u003c len(runnes); i++ {\n\t\tr := runnes[i]\n\t\tif inQuote {\n\t\t\tif r == quoteChar {\n\t\t\t\tinQuote = false\n\t\t\t} else {\n\t\t\t\tcurrent.WriteRune(r)\n\t\t\t}\n\t\t} else {\n\t\t\tif r == '\\'' || r == '\"' {\n\t\t\t\tinQuote = true\n\t\t\t\tquoteChar = r\n\t\t\t} else if r == ' ' || r == '\\t' || r == '\\r' || r == '\\n' {\n\t\t\t\tif current.Len() \u003e 0 {\n\t\t\t\t\targs = append(args, current.String())\n\t\t\t\t\tcurrent.Reset()\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tcurrent.WriteRune(r)\n\t\t\t}\n\t\t}\n\t}\n\tif current.Len() \u003e 0 || inQuote {\n\t\targs = append(args, current.String())\n\t}\n\treturn args\n}\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\tfor {\n\t\tline, err := reader.ReadString('\\n')\n\t\tif len(line) == 0 \u0026\u0026 err != nil {\n\t\t\tbreak\n\t\t}\n\t\tline = strings.TrimSuffix(line, \"\\n\")\n\t\tline = strings.TrimSuffix(line, \"\\r\")\n\t\tif line == \"\" \u0026\u0026 err != nil {\n\t\t\tbreak\n\t\t}\n\t\t\n\t\targs := parseArgs(line)\n\t\tfor _, arg := range args {\n\t\t\tfmt.Println(arg)\n\t\t}\n\t\tif err != nil {\n\t\t\tbreak\n\t\t}\n\t}\n}"
+    }
+  }
+}
