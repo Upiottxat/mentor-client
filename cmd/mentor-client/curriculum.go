@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,27 +37,24 @@ type milestoneEntry struct {
 	milestoneManifest
 }
 
-// candidateBundles lists curriculum bundle files, student-facing first.
+// candidateBundles lists curriculum bundle files (without extension),
+// student-facing first.
 func candidateBundles(coursePath string) []string {
 	return []string{
-		filepath.Join(coursePath, "bundles", "curriculum.student.json"),
-		filepath.Join(coursePath, "curriculum.student.json"),
-		filepath.Join(coursePath, "bundles", "curriculum.full.json"),
-		filepath.Join(coursePath, "curriculum.json"),
+		filepath.Join(coursePath, "bundles", "curriculum.student"),
+		filepath.Join(coursePath, "curriculum.student"),
+		filepath.Join(coursePath, "bundles", "curriculum.full"),
+		filepath.Join(coursePath, "curriculum"),
 	}
 }
 
 // loadBundleLevels reads the first bundle that yields a non-empty level list.
 func loadBundleLevels(coursePath string) []bundleLevel {
-	for _, p := range candidateBundles(coursePath) {
-		data, err := os.ReadFile(p)
-		if err != nil {
-			continue
-		}
+	for _, base := range candidateBundles(coursePath) {
 		var cur struct {
 			Levels []bundleLevel `json:"levels"`
 		}
-		if err := json.Unmarshal(data, &cur); err == nil && len(cur.Levels) > 0 {
+		if _, ok := loadCourseFile(extCandidates(base), &cur); ok && len(cur.Levels) > 0 {
 			return cur.Levels
 		}
 	}
@@ -75,17 +71,13 @@ func levelIDForOrder(coursePath string, order int) string {
 	}
 
 	for _, name := range []string{
-		fmt.Sprintf("level-%02d.json", order),
-		fmt.Sprintf("level-%d.json", order),
+		fmt.Sprintf("level-%02d", order),
+		fmt.Sprintf("level-%d", order),
 	} {
-		data, err := os.ReadFile(filepath.Join(coursePath, "common", "levels", name))
-		if err != nil {
-			continue
-		}
 		var lvl struct {
 			ID string `json:"id"`
 		}
-		if err := json.Unmarshal(data, &lvl); err == nil && lvl.ID != "" {
+		if _, ok := loadCourseFile(extCandidates(filepath.Join(coursePath, "common", "levels", name)), &lvl); ok && lvl.ID != "" {
 			return lvl.ID
 		}
 	}
@@ -106,12 +98,8 @@ func listMilestones(coursePath string) []milestoneEntry {
 			continue
 		}
 		dir := filepath.Join(root, e.Name())
-		data, err := os.ReadFile(filepath.Join(dir, "manifest.json"))
-		if err != nil {
-			continue
-		}
 		var mf milestoneManifest
-		if err := json.Unmarshal(data, &mf); err != nil {
+		if _, ok := loadCourseFile(extCandidates(filepath.Join(dir, "manifest")), &mf); !ok {
 			continue
 		}
 		out = append(out, milestoneEntry{Dir: dir, Base: e.Name(), milestoneManifest: mf})
@@ -171,36 +159,36 @@ type bossFight struct {
 func resolveBossFight(coursePath string, m milestoneEntry) (*bossFight, string) {
 	candidates := []string{}
 	if ref := m.ServerArtifacts.BossfightContract; ref != "" {
-		candidates = append(candidates,
+		candidates = extCandidates(
 			filepath.Join(m.Dir, ref),
 			filepath.Join(coursePath, "common", "server", "milestones", ref),
 			filepath.Join(coursePath, "server", "milestones", ref),
 		)
 	}
 	for _, p := range candidates {
-		data, err := os.ReadFile(p)
-		if err != nil {
-			continue
-		}
 		var bf bossFight
-		if err := json.Unmarshal(data, &bf); err == nil && (bf.Title != "" || len(bf.ConceptMCQs) > 0) {
+		if _, ok := loadCourseFile([]string{p}, &bf); ok && (bf.Title != "" || len(bf.ConceptMCQs) > 0) {
 			return &bf, p
 		}
 	}
 
-	// Fallback: the instructor bundle carries complete boss fights keyed by id.
-	fullPath := filepath.Join(coursePath, "bundles", "curriculum.full.json")
-	if data, err := os.ReadFile(fullPath); err == nil {
+	// Fallback: the instructor bundle carries complete boss fights keyed by id
+	// (the student bundle strips concept answers and contract steps).
+	for _, base := range []string{
+		filepath.Join(coursePath, "bundles", "curriculum.full"),
+		filepath.Join(coursePath, "curriculum"),
+		filepath.Join(coursePath, "bundles", "curriculum.student"),
+	} {
 		var cur struct {
 			Milestones []struct {
 				ID        string    `json:"id"`
 				BossFight bossFight `json:"boss_fight"`
 			} `json:"milestones"`
 		}
-		if err := json.Unmarshal(data, &cur); err == nil {
+		if _, ok := loadCourseFile(extCandidates(base), &cur); ok {
 			for _, ms := range cur.Milestones {
 				if ms.ID == m.MilestoneID && (ms.BossFight.Title != "" || len(ms.BossFight.ConceptMCQs) > 0) {
-					return &ms.BossFight, fullPath
+					return &ms.BossFight, base
 				}
 			}
 		}
@@ -219,22 +207,16 @@ type solutionQuestion struct {
 // loadSolutions reads the server-side answer key for a milestone, if present.
 func loadSolutions(coursePath, milestoneBase string) map[string]solutionQuestion {
 	out := map[string]solutionQuestion{}
-	for _, p := range []string{
-		filepath.Join(coursePath, "server", "milestones", milestoneBase, "document-solutions.json"),
-		filepath.Join(coursePath, "common", "server", "milestones", milestoneBase, "document-solutions.json"),
-	} {
-		data, err := os.ReadFile(p)
-		if err != nil {
-			continue
-		}
-		var sol struct {
-			Questions []solutionQuestion `json:"questions"`
-		}
-		if err := json.Unmarshal(data, &sol); err == nil {
-			for _, q := range sol.Questions {
-				out[q.QuestionID] = q
-			}
-			return out
+	paths := []string{
+		filepath.Join(coursePath, "server", "milestones", milestoneBase, "document-solutions"),
+		filepath.Join(coursePath, "common", "server", "milestones", milestoneBase, "document-solutions"),
+	}
+	var sol struct {
+		Questions []solutionQuestion `json:"questions"`
+	}
+	if _, ok := loadCourseFile(extCandidates(paths...), &sol); ok {
+		for _, q := range sol.Questions {
+			out[q.QuestionID] = q
 		}
 	}
 	return out

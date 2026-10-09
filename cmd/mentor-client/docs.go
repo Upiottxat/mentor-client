@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -121,12 +119,8 @@ func renderMarkdown(md string) string {
 }
 
 func renderTheory(coursePath string, m milestoneEntry, levelID, language string, sectionIDs []string) {
-	data, err := os.ReadFile(filepath.Join(m.Dir, "theory.json"))
-	if err != nil {
-		return
-	}
 	var tm theoryManifest
-	if err := json.Unmarshal(data, &tm); err != nil {
+	if _, ok := loadCourseFile(extCandidates(filepath.Join(m.Dir, "theory")), &tm); !ok {
 		return
 	}
 
@@ -155,13 +149,9 @@ func renderTheory(coursePath string, m milestoneEntry, levelID, language string,
 }
 
 func renderReference(coursePath string, m milestoneEntry, language, sectionID string) {
-	refPath := filepath.Join(coursePath, "languages", language, "milestones", m.Base, "reference.json")
-	data, err := os.ReadFile(refPath)
-	if err != nil {
-		return
-	}
+	refPath := filepath.Join(coursePath, "languages", language, "milestones", m.Base, "reference")
 	var rm referenceManifest
-	if err := json.Unmarshal(data, &rm); err != nil {
+	if _, ok := loadCourseFile(extCandidates(refPath), &rm); !ok {
 		return
 	}
 
@@ -186,12 +176,8 @@ func renderReference(coursePath string, m milestoneEntry, language, sectionID st
 }
 
 func renderKnowledgeCheck(coursePath string, m milestoneEntry, levelID string) {
-	data, err := os.ReadFile(filepath.Join(m.Dir, "questions.json"))
-	if err != nil {
-		return
-	}
 	var qm questionsManifest
-	if err := json.Unmarshal(data, &qm); err != nil {
+	if _, ok := loadCourseFile(extCandidates(filepath.Join(m.Dir, "questions")), &qm); !ok {
 		return
 	}
 
@@ -301,12 +287,8 @@ func runKnowledgeCheck(questions []questionItem, solutions map[string]solutionQu
 }
 
 func renderChallenges(m milestoneEntry, levelID string) {
-	data, err := os.ReadFile(filepath.Join(m.Dir, "challenges.json"))
-	if err != nil {
-		return
-	}
 	var cm challengesManifest
-	if err := json.Unmarshal(data, &cm); err != nil {
+	if _, ok := loadCourseFile(extCandidates(filepath.Join(m.Dir, "challenges")), &cm); !ok {
 		return
 	}
 

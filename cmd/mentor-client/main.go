@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -188,13 +186,10 @@ func runInit(args []string) error {
 	var language string
 	currentLevel := 1
 
-	// Check if courseInput points to a local directory on disk
-	absCourse, err := filepath.Abs(courseInput)
-	isLocalDir := false
-	if err == nil {
-		if info, err := os.Stat(absCourse); err == nil && info.IsDir() {
-			isLocalDir = true
-		}
+	// Check if courseInput points to a local directory on disk.
+	absCourse, isLocalDir, err := classifyCourseInput(courseInput)
+	if err != nil {
+		return err
 	}
 
 	if isLocalDir {
@@ -211,34 +206,37 @@ func runInit(args []string) error {
 		}
 
 		// 2. Read curriculum manifest to auto-detect course slug and language
-		manifestPath := filepath.Join(absCourse, "curriculum.json")
-		if data, err := os.ReadFile(manifestPath); err == nil {
-			var cur struct {
-				CourseSlug string `json:"course_slug"`
-				Slug       string `json:"slug"`
-				Language   string `json:"target_language"`
-				Request    struct {
-					Project struct {
-						Slug string `json:"slug"`
-					} `json:"project"`
-					Target struct {
-						Language string `json:"language"`
-					} `json:"target"`
-				} `json:"request"`
+		// (curriculum.json or curriculum.yaml).
+		var cur struct {
+			CourseSlug string `json:"course_slug"`
+			Slug       string `json:"slug"`
+			ID         string `json:"id"`
+			Name       string `json:"name"`
+			Language   string `json:"target_language"`
+			Request    struct {
+				Project struct {
+					Slug string `json:"slug"`
+				} `json:"project"`
+				Target struct {
+					Language string `json:"language"`
+				} `json:"target"`
+			} `json:"request"`
+		}
+		if _, ok := loadCourseFile(extCandidates(filepath.Join(absCourse, "curriculum")), &cur); ok {
+			courseSlug = cur.CourseSlug
+			if courseSlug == "" {
+				courseSlug = cur.Slug
 			}
-			if err := json.Unmarshal(data, &cur); err == nil {
-				courseSlug = cur.CourseSlug
-				if courseSlug == "" {
-					courseSlug = cur.Slug
-				}
-				if courseSlug == "" {
-					courseSlug = cur.Request.Project.Slug
-				}
+			if courseSlug == "" {
+				courseSlug = cur.ID
+			}
+			if courseSlug == "" {
+				courseSlug = cur.Request.Project.Slug
+			}
 
-				language = cur.Language
-				if language == "" {
-					language = cur.Request.Target.Language
-				}
+			language = cur.Language
+			if language == "" {
+				language = cur.Request.Target.Language
 			}
 		}
 
@@ -249,10 +247,16 @@ func runInit(args []string) error {
 			language = "go"
 		}
 
-		// Fallback skeleton if starter dir was empty
+		// 2b. Fallback skeleton if starter dir was empty: pull the first
+		// level's starter_code or reference_solution from the local curriculum.
 		if len(starterFiles) == 0 {
-			if language == "go" {
-				starterFiles["main.go"] = `package main
+			starterFiles = levelStarterFiles(absCourse, language)
+		}
+
+		// Final fallback skeleton for Go.
+		kickstartInjected := false
+		if len(starterFiles) == 0 && language == "go" {
+			starterFiles["main.go"] = `package main
 
 import "fmt"
 
@@ -271,8 +275,8 @@ func main() {
 	// ============================================================================
 }
 `
-				starterFiles["go.mod"] = fmt.Sprintf("module %s\n\ngo 1.22\n", courseSlug)
-			}
+			starterFiles["go.mod"] = fmt.Sprintf("module %s\n\ngo 1.22\n", courseSlug)
+			kickstartInjected = true
 		}
 
 		targetDir := *destDir
@@ -302,7 +306,7 @@ func main() {
 			fmt.Printf("  • %s\n", f)
 		}
 
-		if currentLevel == 1 {
+		if currentLevel == 1 && kickstartInjected {
 			fmt.Printf("\n%s💡 LEVEL 1 KICKSTART:%s\n", colorYellow, colorReset)
 			fmt.Println("  Level 1 is already solved for you in your starter code (main.go)!")
 			fmt.Println("  Simply open main.go, uncomment the code block, and run 'mentor-client submit'.")
@@ -440,9 +444,11 @@ func runBrief(args []string) error {
 	var serverURL string
 	var token string
 	var language string
+	var workspaceDir string
 
-	_, cfg, err := findWorkspaceDir()
+	wsDir, cfg, err := findWorkspaceDir()
 	if err == nil {
+		workspaceDir = wsDir
 		coursePath = cfg.LocalPath
 		courseSlug = cfg.CourseSlug
 		currentLevel = cfg.CurrentLevel
@@ -496,18 +502,14 @@ func runBrief(args []string) error {
 		var targetLevel *levelInfo
 		var detectedLang string
 
-		candidateBundlePaths := []string{
-			filepath.Join(coursePath, "bundles", "curriculum.student.json"),
-			filepath.Join(coursePath, "curriculum.student.json"),
-			filepath.Join(coursePath, "bundles", "curriculum.full.json"),
-			filepath.Join(coursePath, "curriculum.json"),
+		bundleBases := []string{
+			filepath.Join(coursePath, "bundles", "curriculum.student"),
+			filepath.Join(coursePath, "curriculum.student"),
+			filepath.Join(coursePath, "bundles", "curriculum.full"),
+			filepath.Join(coursePath, "curriculum"),
 		}
 
-		for _, bPath := range candidateBundlePaths {
-			data, err := os.ReadFile(bPath)
-			if err != nil {
-				continue
-			}
+		for _, bBase := range bundleBases {
 			var cur struct {
 				Curriculum struct {
 					TargetLanguage string `json:"target_language"`
@@ -515,37 +517,33 @@ func runBrief(args []string) error {
 				TargetLanguage string      `json:"target_language"`
 				Levels         []levelInfo `json:"levels"`
 			}
-			if err := json.Unmarshal(data, &cur); err == nil && len(cur.Levels) > 0 {
-				if cur.Curriculum.TargetLanguage != "" {
-					detectedLang = cur.Curriculum.TargetLanguage
-				} else if cur.TargetLanguage != "" {
-					detectedLang = cur.TargetLanguage
-				}
-				for i := range cur.Levels {
-					if cur.Levels[i].Order == currentLevel {
-						targetLevel = &cur.Levels[i]
-						break
-					}
-				}
-				if targetLevel != nil {
+			if _, ok := loadCourseFile(extCandidates(bBase), &cur); !ok || len(cur.Levels) == 0 {
+				continue
+			}
+			if cur.Curriculum.TargetLanguage != "" {
+				detectedLang = cur.Curriculum.TargetLanguage
+			} else if cur.TargetLanguage != "" {
+				detectedLang = cur.TargetLanguage
+			}
+			for i := range cur.Levels {
+				if cur.Levels[i].Order == currentLevel {
+					targetLevel = &cur.Levels[i]
 					break
 				}
+			}
+			if targetLevel != nil {
+				break
 			}
 		}
 
 		// Fallback to individual level files if not found in bundle
 		if targetLevel == nil {
-			candidateLevelFiles := []string{
-				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%02d.json", currentLevel)),
-				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%d.json", currentLevel)),
-			}
-			for _, lPath := range candidateLevelFiles {
-				data, err := os.ReadFile(lPath)
-				if err != nil {
-					continue
-				}
+			for _, name := range []string{
+				fmt.Sprintf("level-%02d", currentLevel),
+				fmt.Sprintf("level-%d", currentLevel),
+			} {
 				var lvl levelInfo
-				if err := json.Unmarshal(data, &lvl); err == nil && (lvl.Title != "" || lvl.Goal != "") {
+				if _, ok := loadCourseFile(extCandidates(filepath.Join(coursePath, "common", "levels", name)), &lvl); ok && (lvl.Title != "" || lvl.Goal != "") {
 					targetLevel = &lvl
 					break
 				}
@@ -571,12 +569,14 @@ func runBrief(args []string) error {
 			}
 			ui.Pause("")
 
-			// 2. Special Level 1 Kickstart Notice
+			// 2. Special Level 1 Kickstart Notice (only for the injected Go skeleton)
 			if currentLevel == 1 {
-				ui.Println(ui.Badge("⚡ LEVEL 1 KICKSTART"))
-				ui.Println("  Level 1 is already solved for you in your starter code!")
-				ui.Println("  Open main.go, simply UNCOMMENT the code block, and run 'mentor-client submit'.")
-				ui.Println()
+				if _, statErr := os.Stat(filepath.Join(workspaceDir, "main.go")); statErr == nil {
+					ui.Println(ui.Badge("⚡ LEVEL 1 KICKSTART"))
+					ui.Println("  Level 1 is already solved for you in your starter code!")
+					ui.Println("  Open main.go, simply UNCOMMENT the code block, and run 'mentor-client submit'.")
+					ui.Println()
+				}
 			}
 
 			if targetLevel.Narrative.Motivation != "" {
@@ -766,98 +766,115 @@ func runSubmit(args []string) error {
 		}
 
 		var cases []SpecCase
+		var runCommand, buildCommand []string
 
-		// 1. Locate spec for current level
-		specFile := filepath.Join(coursePath, "server", "specs", fmt.Sprintf("level-%02d.spec.json", currentLevel))
-		if _, err := os.Stat(specFile); os.IsNotExist(err) {
-			specFile = filepath.Join(coursePath, "server", "specs", fmt.Sprintf("level-%d.spec.json", currentLevel))
+		// 1. Prefer the server oracle corpus for the level: each line is an
+		// authoritative {stdin, expected, exit_code, matcher} vector produced
+		// by the reference oracle binary. These are the values the server
+		// grades against, so local grading must use them too.
+		for _, name := range []string{
+			fmt.Sprintf("level-%02d.corpus.jsonl", currentLevel),
+			fmt.Sprintf("level-%d.corpus.jsonl", currentLevel),
+		} {
+			for _, base := range []string{
+				filepath.Join(coursePath, "server", "oracles"),
+				filepath.Join(coursePath, "common", "server", "oracles"),
+			} {
+				data, _, ok := courseReadFile([]string{filepath.Join(base, name)})
+				if !ok {
+					continue
+				}
+				for _, line := range strings.Split(string(data), "\n") {
+					line = strings.TrimSpace(line)
+					if line == "" {
+						continue
+					}
+					var v struct {
+						ID       string `json:"id"`
+						Stdin    string `json:"stdin"`
+						Expected string `json:"expected"`
+						ExitCode int    `json:"exit_code"`
+						Matcher  string `json:"matcher"`
+					}
+					if err := decodeCourseData([]byte(line), &v); err != nil {
+						continue
+					}
+					matcher := v.Matcher
+					if matcher == "" {
+						matcher = "trim"
+					}
+					cases = append(cases, SpecCase{Name: v.ID, Stdin: v.Stdin, Expected: v.Expected, Matcher: matcher})
+				}
+				if len(cases) > 0 {
+					break
+				}
+			}
+			if len(cases) > 0 {
+				break
+			}
 		}
 
-		if data, err := os.ReadFile(specFile); err == nil {
-			var specData struct {
-				AgnosticTestSpec struct {
-					Cases []SpecCase `json:"cases"`
-				} `json:"agnostic_test_spec"`
-				DemoCases []SpecCase `json:"demo_cases"`
-			}
-			if err := json.Unmarshal(data, &specData); err == nil {
-				cases = specData.AgnosticTestSpec.Cases
-				for i, dc := range specData.DemoCases {
-					if dc.Name == "" {
-						dc.Name = fmt.Sprintf("demo-%d", i+1)
-					}
-					cases = append(cases, dc)
+		// 2. Fall back to the level spec's agnostic test cases.
+		if len(cases) == 0 {
+			for _, name := range []string{
+				fmt.Sprintf("level-%02d.spec", currentLevel),
+				fmt.Sprintf("level-%d.spec", currentLevel),
+			} {
+				var specData struct {
+					AgnosticTestSpec struct {
+						Cases []SpecCase `json:"cases"`
+					} `json:"agnostic_test_spec"`
+				}
+				if _, ok := loadCourseFile(extCandidates(filepath.Join(coursePath, "server", "specs", name)), &specData); ok {
+					cases = specData.AgnosticTestSpec.Cases
+					break
 				}
 			}
 		}
 
 		if len(cases) == 0 {
 			// Fallback: look in candidate bundle files
-			candidateBundlePaths := []string{
-				filepath.Join(coursePath, "curriculum.json"),
-				filepath.Join(coursePath, "bundles", "curriculum.student.json"),
-				filepath.Join(coursePath, "curriculum.student.json"),
-				filepath.Join(coursePath, "bundles", "curriculum.full.json"),
-			}
-			for _, curPath := range candidateBundlePaths {
-				data, err := os.ReadFile(curPath)
-				if err != nil {
-					continue
-				}
+			for _, base := range candidateBundles(coursePath) {
 				var cur struct {
 					Levels []struct {
 						Order            int `json:"order"`
 						AgnosticTestSpec struct {
 							Cases []SpecCase `json:"cases"`
 						} `json:"agnostic_test_spec"`
-						DemoCases []SpecCase `json:"demo_cases"`
 					} `json:"levels"`
 				}
-				if err := json.Unmarshal(data, &cur); err == nil {
-					for _, l := range cur.Levels {
-						if l.Order == currentLevel {
-							cases = l.AgnosticTestSpec.Cases
-							for i, dc := range l.DemoCases {
-								if dc.Name == "" {
-									dc.Name = fmt.Sprintf("demo-%d", i+1)
-								}
-								cases = append(cases, dc)
-							}
-							break
-						}
-					}
-					if len(cases) > 0 {
+				if _, ok := loadCourseFile(extCandidates(base), &cur); !ok {
+					continue
+				}
+				for _, l := range cur.Levels {
+					if l.Order == currentLevel {
+						cases = l.AgnosticTestSpec.Cases
 						break
 					}
+				}
+				if len(cases) > 0 {
+					break
 				}
 			}
 		}
 
 		if len(cases) == 0 {
-			// Fallback: look in individual common/levels/level-NN.json
-			candidateLevelFiles := []string{
-				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%02d.json", currentLevel)),
-				filepath.Join(coursePath, "common", "levels", fmt.Sprintf("level-%d.json", currentLevel)),
-			}
-			for _, lPath := range candidateLevelFiles {
-				data, err := os.ReadFile(lPath)
-				if err != nil {
-					continue
-				}
+			// Fallback: look in individual common/levels/level-NN files.
+			for _, name := range []string{
+				fmt.Sprintf("level-%02d", currentLevel),
+				fmt.Sprintf("level-%d", currentLevel),
+			} {
 				var lvl struct {
 					AgnosticTestSpec struct {
 						Cases []SpecCase `json:"cases"`
 					} `json:"agnostic_test_spec"`
-					DemoCases []SpecCase `json:"demo_cases"`
+					BuildCmd []string `json:"build_command"`
+					RunCmd   []string `json:"run_command"`
 				}
-				if err := json.Unmarshal(data, &lvl); err == nil {
+				if _, ok := loadCourseFile(extCandidates(filepath.Join(coursePath, "common", "levels", name)), &lvl); ok {
 					cases = lvl.AgnosticTestSpec.Cases
-					for i, dc := range lvl.DemoCases {
-						if dc.Name == "" {
-							dc.Name = fmt.Sprintf("demo-%d", i+1)
-						}
-						cases = append(cases, dc)
-					}
+					buildCommand = lvl.BuildCmd
+					runCommand = lvl.RunCmd
 					if len(cases) > 0 {
 						break
 					}
@@ -883,29 +900,13 @@ func runSubmit(args []string) error {
 			}
 
 			// Run code locally in student workspace dir
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			var cmd *exec.Cmd
-			switch strings.ToLower(language) {
-			case "python", "py", "python3":
-				cmd = exec.CommandContext(ctx, "python3", "main.py")
-			case "rust":
-				cmd = exec.CommandContext(ctx, "cargo", "run", "--quiet")
-			default: // go
-				cmd = exec.CommandContext(ctx, "go", "run", ".")
-			}
-			cmd.Dir = workspaceDir
-			if tc.Stdin != "" {
-				cmd.Stdin = strings.NewReader(tc.Stdin)
-			}
-
-			outBytes, err := cmd.CombinedOutput()
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			out, runErr := runStudentProgram(ctx, workspaceDir, language, tc.Stdin, runCommand, buildCommand)
 			cancel()
 
-			out := string(outBytes)
-
-			if err != nil {
+			if runErr != nil {
 				allPassed = false
-				failureMsg = fmt.Sprintf("Execution error on case %q: %v\nOutput:\n%s", tc.Name, err, out)
+				failureMsg = fmt.Sprintf("Execution error on case %q: %v\nOutput:\n%s", tc.Name, runErr, out)
 				break
 			}
 
