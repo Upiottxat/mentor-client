@@ -13,6 +13,7 @@ import (
 
 	"github.com/upiottxat/mentor-client/internal/api"
 	"github.com/upiottxat/mentor-client/internal/config"
+	"github.com/upiottxat/mentor-client/internal/ui"
 	"github.com/upiottxat/mentor-client/internal/workspace"
 )
 
@@ -26,26 +27,29 @@ const (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	args, interactive, animation, pagination := extractGlobalFlags(os.Args[1:])
+	ui.Configure(interactive, animation, pagination)
+
+	if len(args) < 1 {
 		printUsage()
 		os.Exit(1)
 	}
 
-	cmd := os.Args[1]
-	args := os.Args[2:]
+	cmd := args[0]
+	cmdArgs := args[1:]
 
 	var err error
 	switch cmd {
 	case "init":
-		err = runInit(args)
+		err = runInit(cmdArgs)
 	case "status":
-		err = runStatus(args)
+		err = runStatus(cmdArgs)
 	case "brief", "doc":
-		err = runBrief(args)
+		err = runBrief(cmdArgs)
 	case "hint":
-		err = runHint(args)
+		err = runHint(cmdArgs)
 	case "submit":
-		err = runSubmit(args)
+		err = runSubmit(cmdArgs)
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -58,6 +62,27 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s[mentor-client error]: %v%s\n", colorRed, err, colorReset)
 		os.Exit(1)
 	}
+}
+
+// extractGlobalFlags pulls process-wide UI flags out of the argument list so
+// they work anywhere on the command line, not just after the subcommand.
+func extractGlobalFlags(args []string) (remaining []string, interactive, animation, pagination bool) {
+	interactive, animation, pagination = true, true, true
+	for _, a := range args {
+		switch a {
+		case "--no-interactive", "--no-tui":
+			interactive = false
+		case "--no-animation", "--no-anim":
+			animation = false
+		case "--no-pagination", "--no-paging":
+			pagination = false
+		case "--plain":
+			interactive, animation, pagination = false, false, false
+		default:
+			remaining = append(remaining, a)
+		}
+	}
+	return remaining, interactive, animation, pagination
 }
 
 func printUsage() {
@@ -85,7 +110,13 @@ func printUsage() {
   # Submit and test your solution:
   mentor-client submit --course /path/to/mini-project-course
   # (or run 'mentor-client submit' inside your workspace)
-`, colorBold, colorReset, colorBold, colorReset, colorBold, colorReset, colorBold, colorReset)
+
+%sGLOBAL FLAGS (anywhere):%s
+  --no-interactive   Disable interactive prompts (static rendering)
+  --no-animation     Disable typewriter and animated effects
+  --no-pagination    Disable press-to-continue between brief sections
+  --plain            Shortcut for --no-interactive --no-animation --no-pagination
+`, colorBold, colorReset, colorBold, colorReset, colorBold, colorReset, colorBold, colorReset, colorBold, colorReset)
 }
 
 // rearrangeArgs moves flags to the front so standard Go flag.FlagSet can parse them regardless of order
@@ -364,15 +395,33 @@ func runStatus(args []string) error {
 
 	fmt.Printf("%s[mentor-client status]%s\n", colorCyan, colorReset)
 	if workspaceDir != "" {
-		fmt.Printf("Workspace Directory: %s\n", workspaceDir)
+		ui.Println(ui.KeyVal("Workspace", workspaceDir))
 	}
-	fmt.Printf("Course:              %s%s%s\n", colorBold, courseSlug, colorReset)
-	fmt.Printf("Active Level:        %sLevel %d%s\n", colorYellow, currentLevel, colorReset)
+	ui.Println(ui.KeyVal("Course", ui.BoldStyle.Render(courseSlug)))
+	ui.Println(ui.KeyVal("Level", ui.WarnStyle.Render(fmt.Sprintf("Level %d", currentLevel))))
 	if coursePath != "" {
-		fmt.Printf("Curriculum Source:   %s\n", coursePath)
+		ui.Println(ui.KeyVal("Source", coursePath))
 	}
 
-	fmt.Printf("\nRun %smentor-client brief%s to inspect level objectives.\n", colorBold, colorReset)
+	if cfg != nil && coursePath != "" {
+		levelID := levelIDForOrder(coursePath, currentLevel)
+		if m, _ := milestoneForLevelID(coursePath, levelID); m != nil {
+			ui.Println(ui.KeyVal("Milestone", m.MilestoneID))
+
+			bf, _ := resolveBossFight(coursePath, *m)
+			if bf != nil {
+				state := "pending"
+				if cfg.HasMilestone(m.MilestoneID) {
+					state = "cleared"
+				}
+				ui.Println(ui.KeyVal("Boss Fight", fmt.Sprintf("%s [%s]", bf.Title, state)))
+			}
+		}
+		ui.Println(ui.KeyVal("Milestones", fmt.Sprintf("%d cleared", len(cfg.CompletedMilestones))))
+	}
+
+	ui.Println()
+	ui.Println(ui.MutedStyle.Render("Run `mentor-client brief` to inspect level objectives."))
 	return nil
 }
 
@@ -420,18 +469,17 @@ func runBrief(args []string) error {
 		return fmt.Errorf("no course specified: provide --course <path> or run inside a mentor workspace")
 	}
 
-	fmt.Printf("\n%s============================================================%s\n", colorCyan, colorReset)
-	fmt.Printf("%s  LEVEL %d BRIEF — %s%s\n", colorBold, currentLevel, strings.ToUpper(courseSlug), colorReset)
-	fmt.Printf("%s============================================================%s\n\n", colorCyan, colorReset)
+	ui.Println()
+	ui.Println(ui.Banner(fmt.Sprintf("LEVEL %d BRIEF", currentLevel), strings.ToUpper(courseSlug)))
 
 	if coursePath != "" {
 		type levelInfo struct {
-			ID                 string   `json:"id"`
-			Order              int      `json:"order"`
-			Title              string   `json:"title"`
-			Goal               string   `json:"goal"`
-			Difficulty         string   `json:"difficulty"`
-			Narrative          struct {
+			ID         string `json:"id"`
+			Order      int    `json:"order"`
+			Title      string `json:"title"`
+			Goal       string `json:"goal"`
+			Difficulty string `json:"difficulty"`
+			Narrative  struct {
 				Hook         string `json:"hook"`
 				Motivation   string `json:"motivation"`
 				ConcreteDemo string `json:"concrete_demo"`
@@ -513,63 +561,74 @@ func runBrief(args []string) error {
 				lang = "go"
 			}
 
-			fmt.Printf("%sTitle:%s      %s (%s)\n", colorBold, colorReset, targetLevel.Title, strings.ToUpper(targetLevel.Difficulty))
-			fmt.Printf("%sGoal:%s       %s\n\n", colorBold, colorReset, targetLevel.Goal)
+			ui.Println(ui.KeyVal("Title", ui.BoldStyle.Render(targetLevel.Title)+" "+ui.MutedStyle.Render("("+strings.ToUpper(targetLevel.Difficulty)+")")))
+			ui.Println(ui.KeyVal("Goal", ui.Wrap(targetLevel.Goal)))
+			ui.Println()
 
-			// 1. Narrator Hook
+			// 1. Narrator — theatrical typewriter reveal
 			if targetLevel.Narrative.Hook != "" {
-				fmt.Printf("%s🎙️ NARRATOR:%s\n%s\"%s\"%s\n\n", colorCyan, colorReset, colorBold, targetLevel.Narrative.Hook, colorReset)
+				ui.Narrate(targetLevel.Narrative.Hook)
 			}
+			ui.Pause("")
 
 			// 2. Special Level 1 Kickstart Notice
 			if currentLevel == 1 {
-				fmt.Printf("%s⚡ LEVEL 1 KICKSTART NOTICE:%s\n", colorYellow, colorReset)
-				fmt.Println("  Level 1 is already solved for you in your starter code!")
-				fmt.Println("  Open main.go, simply UNCOMMENT the code block, and run 'mentor-client submit'.")
-				fmt.Println()
+				ui.Println(ui.Badge("⚡ LEVEL 1 KICKSTART"))
+				ui.Println("  Level 1 is already solved for you in your starter code!")
+				ui.Println("  Open main.go, simply UNCOMMENT the code block, and run 'mentor-client submit'.")
+				ui.Println()
 			}
 
 			if targetLevel.Narrative.Motivation != "" {
-				fmt.Printf("%sWhy This Matters:%s\n%s\n\n", colorBold, colorReset, targetLevel.Narrative.Motivation)
+				ui.Println(ui.Section("Why This Matters"))
+				ui.Println(ui.Wrap(targetLevel.Narrative.Motivation))
+				ui.Pause("")
 			}
 			if targetLevel.Narrative.ConcreteDemo != "" {
-				fmt.Printf("%sExpected Demo:%s\n%s\n\n", colorBold, colorReset, targetLevel.Narrative.ConcreteDemo)
+				ui.Println(ui.Section("Expected Demo"))
+				ui.Println(ui.Wrap(targetLevel.Narrative.ConcreteDemo))
+				ui.Pause("")
 			}
 
 			if len(targetLevel.LearningObjectives) > 0 {
-				fmt.Printf("%sLearning Objectives:%s\n", colorBold, colorReset)
+				ui.Println(ui.Section("Learning Objectives"))
 				for _, obj := range targetLevel.LearningObjectives {
-					fmt.Printf("  • %s\n", obj)
+					ui.Println(ui.Bullet(obj))
 				}
-				fmt.Println()
+				ui.Pause("")
 			}
 
 			if len(targetLevel.Constraints) > 0 {
-				fmt.Printf("%sPublic Constraints:%s\n", colorBold, colorReset)
+				ui.Println(ui.Section("Public Constraints"))
 				for _, c := range targetLevel.Constraints {
-					fmt.Printf("  • %s\n", c)
+					ui.Println(ui.Bullet(c))
 				}
-				fmt.Println()
+				ui.Pause("")
 			}
 
 			if len(targetLevel.Deliverables) > 0 {
-				fmt.Printf("%sDeliverables:%s\n", colorBold, colorReset)
+				ui.Println(ui.Section("Deliverables"))
 				for _, d := range targetLevel.Deliverables {
-					fmt.Printf("  • %s\n", d)
+					ui.Println(ui.Bullet(d))
 				}
-				fmt.Println()
+				ui.Pause("")
 			}
 
 			if len(targetLevel.Behaviors) > 0 {
-				fmt.Printf("%sRequired Behaviors:%s\n", colorBold, colorReset)
+				ui.Println(ui.Section("Required Behaviors"))
 				for _, b := range targetLevel.Behaviors {
-					fmt.Printf("  • [%s]: %s\n", b.ID, b.Description)
+					ui.Println(ui.Bullet(ui.BoldStyle.Render("["+b.ID+"] ") + b.Description))
 				}
-				fmt.Println()
+				ui.Pause("")
 			}
 
-			// 3. Render Document Engine Artifacts (Theory, Language Cheat Sheet, MCQs, Mini-Challenges)
+			// 3. Render Document Engine Artifacts (Theory, Language Cheat Sheet, Graded MCQs, Mini-Challenges)
 			renderEducationalDocs(coursePath, targetLevel.ID, lang)
+
+			// 4. Boss fight teaser at the final level of a milestone
+			if m, final := isMilestoneFinalLevel(coursePath, targetLevel.ID); final {
+				renderBossTeaser(coursePath, m)
+			}
 
 			return nil
 		}
@@ -891,16 +950,38 @@ func runSubmit(args []string) error {
 			return nil
 		}
 
-		fmt.Printf("%s✔ [1/2] Predefined Verification: PASSED (%d/%d cases)%s\n", colorGreen, predefinedPassed, predefinedTotal, colorReset)
+		ui.Println(ui.SuccessStyle.Render(fmt.Sprintf("✔ [1/2] Predefined Verification: PASSED (%d/%d cases)", predefinedPassed, predefinedTotal)))
 		if dynamicTotal > 0 {
-			fmt.Printf("%s✔ [2/2] Dynamic Dual Oracle:     PASSED (%d/%d vectors)%s\n", colorGreen, dynamicPassed, dynamicTotal, colorReset)
+			ui.Println(ui.SuccessStyle.Render(fmt.Sprintf("✔ [2/2] Dynamic Dual Oracle:     PASSED (%d/%d vectors)", dynamicPassed, dynamicTotal)))
 		}
-		fmt.Printf("\n%s🎉 LEVEL %d CERTIFIED VERIFIED!%s\n", colorGreen, currentLevel, colorReset)
+		ui.Println("\n" + ui.Success(fmt.Sprintf("🎉 LEVEL %d CERTIFIED VERIFIED!", currentLevel)))
+
+		bossGated := false
+		if cfg != nil {
+			levelID := levelIDForOrder(coursePath, currentLevel)
+			m, final := isMilestoneFinalLevel(coursePath, levelID)
+			if final && !cfg.HasMilestone(m.MilestoneID) {
+				if bf, _ := resolveBossFight(coursePath, *m); bf != nil && ui.Interactive() {
+					bossGated = true
+					if runBossFight(coursePath, *m, bf) {
+						cfg.MarkMilestone(m.MilestoneID)
+					} else {
+						_ = config.SaveConfig(workspaceDir, cfg)
+						ui.Println(ui.WarnStyle.Render("The boss fight was not cleared — re-run `mentor-client submit` to face it again before advancing."))
+						return nil
+					}
+				}
+			}
+		}
 
 		if cfg != nil {
 			cfg.CurrentLevel++
 			_ = config.SaveConfig(workspaceDir, cfg)
-			fmt.Printf("Unlocked Level %d! Run %smentor-client brief%s for the next challenge.\n", cfg.CurrentLevel, colorBold, colorReset)
+			if bossGated {
+				ui.Println("\n" + ui.SuccessStyle.Render(fmt.Sprintf("Milestone cleared! Unlocked Level %d. Run `mentor-client brief` for the next challenge.", cfg.CurrentLevel)))
+			} else {
+				ui.Println(ui.MutedStyle.Render(fmt.Sprintf("Unlocked Level %d! Run `mentor-client brief` for the next challenge.", cfg.CurrentLevel)))
+			}
 		}
 		return nil
 	}
@@ -974,4 +1055,3 @@ func extractNonEmptyLines(s string) []string {
 	}
 	return lines
 }
-

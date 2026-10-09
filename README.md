@@ -10,7 +10,7 @@
 `mentor-client` gives learners an authentic, real-world development experience:
 
 1. **Native Local Development:** No toy in-browser web editors. Write real code in real project folders on your own workstation using your preferred editor (VS Code, GoLand, Neovim, Zed).
-2. **Pure Standard Library & Portability:** Written in pure Go with zero external dependencies (no Git, no CGO, no heavy frameworks). A single, lightweight, highly portable binary.
+2. **Charm-Powered Rich UX:** Built on the [Charm](https://charm.sh) stack (Lip Gloss, Bubble Tea, Huh, Glamour) for gradient banners, animated typewriter narration, graded interactive quizzes, and guided challenges — with zero CGO and a single portable binary. Every effect auto-falls back to clean static output when piped.
 3. **Zero-Leak Anti-Cheat Invariant:** The client workspace contains **zero test suites, zero hidden edge cases, and zero answer keys**. Authoritative verification occurs against the server (or local authoritative spec) which returns only clean, projected, spoiler-free diagnostics.
 4. **Dynamic Dual Oracle Anti-Cheat:** Submissions execute through a two-phase evaluation pipeline:
    - **Gate 1 (60%):** Predefined behavioral contract tests verifying core requirements.
@@ -53,11 +53,17 @@ mentor-client <command> [flags]
 
 COMMANDS:
   init            Initialize an isolated course workspace with verified starter code
-  status          Inspect active level, progression metrics, and milestone goals
-  brief           Render architectural brief, public constraints, and verification contract
+  status          Inspect active level, milestone, and boss-fight progression
+  brief           Render a theatrical brief: narrator, theory, graded quiz, challenges
   hint            Request escalating progressive hint tier without solution leakage
-  submit          Submit code to authoritative runner (triggers Dynamic Dual Oracle)
+  submit          Submit code to authoritative runner (triggers Dynamic Dual Oracle + Boss Fight)
   help            Display client commands and configuration options
+
+GLOBAL FLAGS (anywhere):
+  --no-interactive   Disable interactive prompts (static rendering)
+  --no-animation     Disable typewriter and animated effects
+  --no-pagination    Disable press-to-continue between brief sections
+  --plain            Shortcut for all three above
 ```
 
 ---
@@ -88,7 +94,7 @@ mentor-client init simple-shell --server http://localhost:8080 [--dir ./my-shell
 
 ### 2. `brief` / `doc` — Inspect Level Requirements
 
-Displays the architectural goals and constraints of the active level directly in formatted terminal output:
+Renders a theatrical, interactive brief in your terminal. In a TTY you get a typewriter narrator, styled panels, press-to-continue pagination, gradient headers, and markdown-styled theory — all skippable with `--no-animation`.
 
 ```bash
 cd my-shell
@@ -101,17 +107,22 @@ mentor-client brief --course /path/to/mini-project-course --level 1
 ```
 
 **Displayed Sections:**
-- **Level Header:** Title, level number, and core pedagogical objective.
+- **Level Header:** Gradient banner, title, level number, difficulty.
+- **🎙️ Narrator:** Typewriter-revealed pedagogical hook (any key skips).
 - **Pedagogical Motivation & Hook:** Why this stage exists and what breaks downstream if omitted.
 - **Concrete Demonstration:** Illustrative user/operator interaction scenario.
-- **Required Behaviors:** Explicit behavioral requirements (`B1`, `B2`, etc.).
-- **Public Constraints:** Language constraints, disallowed packages, or memory/CPU limits.
+- **📖 Core Theory:** Markdown-rendered theory + language cheat-sheet reference examples.
+- **🧩 Interactive Knowledge Check:** Graded MCQs verified locally against the server's `document-solutions.json` answer key. **100% is required to pass** (wrong answers show the official explanation, then you retry).
+- **🛠️ Interactive Mini-Challenges:** Guided challenge cards with progressive hint reveal and completion tracking.
+- **⚠ BOSS FIGHT AHEAD:** Teaser with boss title and preview when you're on a milestone's final level.
+
+In a non-TTY (piped) environment everything renders as clean, uncoloured, static text.
 
 ---
 
 ### 3. `status` — View Progress & Workspace Details
 
-Displays course information, active level, target language, and server connection status:
+Displays course information, active level, current milestone, boss-fight state, and milestones cleared:
 
 ```bash
 mentor-client status
@@ -157,6 +168,14 @@ mentor-client submit --course /path/to/mini-project-course --level 1 --dir ./my-
    - Evaluates differentially against the server's golden reference solution.
 4. **On Pass:** Automatically increments your active level (`CurrentLevel++`) in `.mentor/config.json` and unlocks the next level's brief!
 
+**Boss Fights (`⚔️`):** When you pass the **final level of a milestone**, `submit` summons the milestone's boss fight:
+1. A narrated interactive scenario walkthrough — you confirm each contract step behaves exactly as expected (`contract.steps`).
+2. A **graded concept MCQ gauntlet** — answered in-terminal and verified against the local answer key.
+3. **Passing requires a perfect 100% result.** A wrong answer or unsatisfied step fails the run; you re-run `mentor-client submit` to face the boss again.
+4. On a flawless victory the milestone is recorded in `.mentor/config.json` (`completed_milestones` / `boss_fights_passed`).
+
+The boss fight runs only in interactive terminals; piped runs advance levels without the gate so scripts are never blocked.
+
 ---
 
 ## 🗂️ Workspace Structure
@@ -180,7 +199,9 @@ my-shell/
   "course_slug": "mini-project-course",
   "current_level": 1,
   "language": "go",
-  "student_token": ""
+  "student_token": "",
+  "completed_milestones": [],
+  "boss_fights_passed": []
 }
 ```
 

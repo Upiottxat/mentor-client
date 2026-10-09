@@ -27,13 +27,13 @@ type StarterCodeResponse struct {
 
 // LevelBriefResponse contains the public pedagogical instructions and constraints for a level.
 type LevelBriefResponse struct {
-	LevelOrder         int      `json:"level_order"`
-	Title              string   `json:"title"`
-	Goal               string   `json:"goal"`
-	Motivation         string   `json:"motivation,omitempty"`
-	ConcreteDemo       string   `json:"concrete_demo,omitempty"`
-	PublicConstraints  []string `json:"public_constraints,omitempty"`
-	TotalHintsAvailable int     `json:"total_hints_available"`
+	LevelOrder          int      `json:"level_order"`
+	Title               string   `json:"title"`
+	Goal                string   `json:"goal"`
+	Motivation          string   `json:"motivation,omitempty"`
+	ConcreteDemo        string   `json:"concrete_demo,omitempty"`
+	PublicConstraints   []string `json:"public_constraints,omitempty"`
+	TotalHintsAvailable int      `json:"total_hints_available"`
 }
 
 // HintResponse returns a progressive hint for the level without spoilers.

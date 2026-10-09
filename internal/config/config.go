@@ -15,6 +15,35 @@ type WorkspaceConfig struct {
 	StudentToken string `json:"student_token,omitempty"`
 	CurrentLevel int    `json:"current_level"`
 	Language     string `json:"language,omitempty"`
+
+	// Progression gates. A milestone is only marked complete once its boss
+	// fight has been passed at 100%.
+	CompletedMilestones []string `json:"completed_milestones,omitempty"`
+	BossFightsPassed    []string `json:"boss_fights_passed,omitempty"`
+}
+
+// HasMilestone reports whether the given milestone id has been completed.
+func (c *WorkspaceConfig) HasMilestone(id string) bool {
+	for _, m := range c.CompletedMilestones {
+		if m == id {
+			return true
+		}
+	}
+	return false
+}
+
+// MarkMilestone records a milestone as completed (idempotent).
+func (c *WorkspaceConfig) MarkMilestone(id string) {
+	if id == "" || c.HasMilestone(id) {
+		return
+	}
+	c.CompletedMilestones = append(c.CompletedMilestones, id)
+	for _, b := range c.BossFightsPassed {
+		if b == id {
+			return
+		}
+	}
+	c.BossFightsPassed = append(c.BossFightsPassed, id)
 }
 
 // ConfigPath returns the absolute or relative path to .mentor/config.json in the workspace.
